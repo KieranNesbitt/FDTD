@@ -7,8 +7,14 @@ class visulise_data:
         df_E = pd.read_csv("E_field", header=None)
         df_H = pd.read_csv("H_field", header = None)
         array_2d_E = df_E.values[:, :-1].astype(float)
-        plt.plot(array_2d_E[50, :])
-        
+        array_2d_H = df_H.values[:, :-1].astype(float)
+
+        fig, axs = plt.subplots(2)
+        fig.suptitle('Vertically stacked subplots')
+        axs[0].plot(array_2d_E[100])
+        axs[0].set_ylabel("$E_x$")
+        axs[1].plot(array_2d_H[100])
+        axs[1].set_ylabel("$H_y$")
         
         """plt.imshow(array_2d, cmap='viridis', aspect='auto')
         plt.colorbar()  
