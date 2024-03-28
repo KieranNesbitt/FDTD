@@ -55,20 +55,6 @@ class Grid:
             self.update_source()
             self.output_to_csv()
 
-    def visulise_data(self):
-        
-        df_E = pd.read_csv("E_field", header=None)
-        df_H = pd.read_csv("H_field", header = None)
-        array_2d_E = df_E.values[:, :-1].astype(float)
-        plt.plot(array_2d_E[50, :])
-        
-        
-        """plt.imshow(array_2d, cmap='viridis', aspect='auto')
-        plt.colorbar()  
-        plt.xlabel('Column Index')  
-        plt.ylabel('Row Index')  """
-        plt.show()
-
 
 def guassian(time_step):
     return np.exp(-(time_step -30)*(time_step -30)/(100))
