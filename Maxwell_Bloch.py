@@ -55,7 +55,7 @@ class Grid:
         self.source = source
 
     def update_source(self):
-        self.E_field[0] += self.source(self.time_step)
+        self.E_field[100] += self.source(self.time_step)
 
     def update_H(self, index):
         self.H_field[index] = self.H_field[index] + self.Courant_number*(self.E_field[index + 1] - self.E_field[index])
@@ -71,12 +71,14 @@ class Grid:
         for self.time_step in self.time:
             
             for index in self.m_index:
-                self.update_H(index)
-            self.boundary_conditions()
-
-            for index in self.m_index:
                 self.update_E(index)
+
             self.update_source()
+            self.boundary_conditions()
+            for index in self.m_index:
+                self.update_H(index)
+
+
             self.append_to_list()
 
         self.E_field_array = np.array(self.E_field_list)
@@ -98,7 +100,7 @@ def sinusoidal(time_step):
     dt = ddx / 6e8 # Time step size
     return np. sin(2 * np.pi * freq_in * dt * time_step)
 if __name__ == "__main__":
-    total_time = 250
-    fdtd = Grid(shape = (100,None), Courant_number=0.50)
+    total_time = 1000
+    fdtd = Grid(shape = (200,None), Courant_number=0.50)
     fdtd.set_source(guassian)
     fdtd.run(total_time)

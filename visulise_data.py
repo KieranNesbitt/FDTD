@@ -12,6 +12,9 @@ class visulise_data:
         array_2d_H = df_H.values[:, :-1].astype(float)
 
         fig, axs = plt.subplots(2)
+        axs[0].set_ylim(array_2d_E.min()*1.1, array_2d_E.max()*1.1)
+        axs[1].set_ylim(array_2d_H.min()*1.1, array_2d_H.max()*1.1)
+
         fig.suptitle('EM Pulse')
         axs[0].plot(array_2d_E[frame])
         axs[0].set_ylabel("$E_x$")
@@ -21,4 +24,4 @@ class visulise_data:
        
         plt.show()
 
-visulise_data(250)
+visulise_data(225)
