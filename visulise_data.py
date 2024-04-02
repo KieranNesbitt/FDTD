@@ -24,4 +24,4 @@ class visulise_data:
        
         plt.show()
 
-visulise_data(225)
+visulise_data(200)

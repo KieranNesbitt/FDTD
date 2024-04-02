@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from functools import wraps
 import time
+import scipy.signal as signal
+import multiprocessing as mp
 
 def timeit(func):
     @wraps(func)
@@ -41,13 +43,16 @@ class Grid:
         
         self.H_field_list.append(np.copy(self.H_field))
 
-    def set_boundary_conditions(self):
+    def set_boundary_conditions(self, Low_BC= None, High_BC= None, pulse_time=None):
+        self.pulse_time = pulse_time
         self.boundary_low = [0, 0]
         self.boundary_high = [0, 0]        
 
     def boundary_conditions(self):
-        self.E_field[0] = self.boundary_low.pop(0)
-        self.boundary_low.append(self.E_field[1])
+        if self.pulse_time != None:
+            if self.time_step >= self.pulse_time:
+                self.E_field[0] = self.boundary_low.pop(0)
+                self.boundary_low.append(self.E_field[1])
         self.E_field[self.N_x - 1] = self.boundary_high.pop(0)
         self.boundary_high.append(self.E_field[self.N_x - 2])
 
@@ -55,31 +60,28 @@ class Grid:
         self.source = source
 
     def update_source(self):
-        self.E_field[100] += self.source(self.time_step)
-
-    def update_H(self, index):
-        self.H_field[index] = self.H_field[index] + self.Courant_number*(self.E_field[index + 1] - self.E_field[index])
+        self.E_field[0] += self.source(self.time_step)
     
-    def update_E(self, index):
-        self.E_field[index] = self.E_field[index] + self.Courant_number*(self.H_field[index] - self.H_field[index-1])
-
+    def update_H(self):
+        for index in self.m_index:
+            self.H_field[index] = self.H_field[index] + self.Courant_number*(self.E_field[index + 1] - self.E_field[index])
+    
+    def update_E(self):
+        for index in self.m_index:
+            self.E_field[index] = self.E_field[index] + self.Courant_number*(self.H_field[index] - self.H_field[index-1])
+    @timeit
     def run(self, total_time):
         self.time = np.arange(0,total_time+1, 1)
         self.m_index = np.arange(0,self.N_x-1, 1)
         self.set_boundary_conditions()
         
         for self.time_step in self.time:
-            
-            for index in self.m_index:
-                self.update_E(index)
-
+            self.update_E()
             self.update_source()
             self.boundary_conditions()
-            for index in self.m_index:
-                self.update_H(index)
-
-
+            self.update_H()
             self.append_to_list()
+            
 
         self.E_field_array = np.array(self.E_field_list)
         self.H_field_array = np.array(self.H_field_list)
@@ -94,13 +96,22 @@ def guassian(time_step):
     spread = 12 
     return np.exp(-0.5 * ((t0 - time_step) / spread) ** 2)
 
+def Guassian_pulse(time_step, ):
+    t0=40
+    f0 = 100e6 #Hz
+    return np.exp(-(time_step-t0)**2/(2*time_step**2)*np.cos(2*np.pi*f0*(time_step-t0)))
+
 def sinusoidal(time_step):
     freq_in =700e6
     ddx = 0.01 # Cell size
     dt = ddx / 6e8 # Time step size
-    return np. sin(2 * np.pi * freq_in * dt * time_step)
-if __name__ == "__main__":
+    return np.sin(2 * np.pi * freq_in * dt * time_step)
+
+@timeit
+def main():
     total_time = 1000
     fdtd = Grid(shape = (200,None), Courant_number=0.50)
-    fdtd.set_source(guassian)
+    fdtd.set_source(sinusoidal)
     fdtd.run(total_time)
+if __name__ == "__main__":
+    main()
