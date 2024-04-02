@@ -30,8 +30,9 @@ class Grid:
         self.rel_permitivity, self.rel_permibility = rel_permitivity, rel_permibility
         self.total_time = total_time
         self.N_x,self.N_y = shape
-        self.H_field = np.zeros(self.N_x, dtype=np.float16)
-        self.E_field = np.zeros(self.N_x, dtype=np.float16)
+        self.H_field = np.zeros(self.N_x, dtype=np.float64)
+        self.E_field = np.zeros(self.N_x, dtype=np.float64)
+        self.Dielectric = np.ones(self.N_x)
         self.E_field_list =[]
         self.H_field_list =[]
 
@@ -48,19 +49,28 @@ class Grid:
         self.boundary_low = [0, 0]
         self.boundary_high = [0, 0]        
 
+    def create_dielectric(self, pos = None):
+        if pos == None:
+            pos = [0,self.N_x]
+
+        self.Dielectric[pos[0]:pos[1]] /= self.rel_permitivity
+        df = pd.DataFrame(self.Dielectric)
+        df.to_csv('Dielectric.csv', index=False, header=None)
+
     def boundary_conditions(self):
-        if self.pulse_time != None:
-            if self.time_step >= self.pulse_time:
-                self.E_field[0] = self.boundary_low.pop(0)
-                self.boundary_low.append(self.E_field[1])
+        """if self.pulse_time != None:
+            if self.time_step >= self.pulse_time:"""
+        """self.E_field[0] = self.boundary_low.pop(0)
+        self.boundary_low.append(self.E_field[1])"""
         self.E_field[self.N_x - 1] = self.boundary_high.pop(0)
         self.boundary_high.append(self.E_field[self.N_x - 2])
 
-    def set_source(self, source):
+    def set_source(self, source, position):
         self.source = source
+        self.position = position
 
     def update_source(self):
-        self.E_field[0] += self.source(self.time_step)
+        self.E_field[self.position] += self.source(self.time_step)
     
     def update_H(self):
         for index in self.m_index:
@@ -68,7 +78,7 @@ class Grid:
     
     def update_E(self):
         for index in self.m_index:
-            self.E_field[index] = self.E_field[index] + self.Courant_number*(self.H_field[index] - self.H_field[index-1])
+            self.E_field[index] = self.E_field[index] + (self.Courant_number*self.Dielectric[index])*(self.H_field[index] - self.H_field[index-1])
     @timeit
     def run(self, total_time):
         self.time = np.arange(0,total_time+1, 1)
@@ -110,8 +120,9 @@ def sinusoidal(time_step):
 @timeit
 def main():
     total_time = 1000
-    fdtd = Grid(shape = (200,None), Courant_number=0.50)
-    fdtd.set_source(sinusoidal)
+    fdtd = Grid(shape = (200,None), Courant_number=0.50, rel_permitivity=4)
+    fdtd.create_dielectric([100,200])
+    fdtd.set_source(sinusoidal, 0)
     fdtd.run(total_time)
 if __name__ == "__main__":
     main()
