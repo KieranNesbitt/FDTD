@@ -21,14 +21,20 @@ class Grid:
     def __init__(self,
                 shape: None,
                 Courant_number: np.float16 = None,
-                impedance_0: np.float16 = 377.0,
                 rel_permitivity: np.float16 = 1.0,
                 rel_permibility: np.float16 = 1.0,
-                total_time: int = 250
+                total_time: int = 250,
+                cell_spacing: np.float16 = 0.01,
+                Normalised_E_field: bool = False,
                  ):
-        self.impedance_0, self.Courant_number =impedance_0, Courant_number
         self.rel_permitivity, self.rel_permibility = rel_permitivity, rel_permibility
         self.total_time = total_time
+        self.impedance_0 = 1
+        if not Normalised_E_field:
+            self.impedance_0 = 377
+        self.Delta_x = cell_spacing
+        self.Delta_t = self.Delta_x/(2*3e8)
+        self.Courant_number = 3e8*(self.Delta_t/self.Delta_x)
         self.N_x,self.N_y = shape
         self.H_field = np.zeros(self.N_x, dtype=np.float64)
         self.E_field = np.zeros(self.N_x, dtype=np.float64)
@@ -74,11 +80,11 @@ class Grid:
     
     def update_H(self):
         for index in self.m_index:
-            self.H_field[index] = self.H_field[index] + self.Courant_number*(self.E_field[index + 1] - self.E_field[index])
+            self.H_field[index] = self.H_field[index] + self.Courant_number*(self.E_field[index + 1] - self.E_field[index])/self.impedance_0
     
     def update_E(self):
         for index in self.m_index:
-            self.E_field[index] = self.E_field[index] + (self.Courant_number*self.Dielectric[index])*(self.H_field[index] - self.H_field[index-1])
+            self.E_field[index] = self.E_field[index] + (self.Courant_number*self.Dielectric[index])*(self.H_field[index] - self.H_field[index-1])*self.impedance_0
     @timeit
     def run(self, total_time):
         self.time = np.arange(0,total_time+1, 1)
@@ -113,14 +119,14 @@ def Guassian_pulse(time_step, ):
 
 def sinusoidal(time_step):
     freq_in =700e6
-    ddx = 0.01 # Cell size
-    dt = ddx / 6e8 # Time step size
+    dx = 0.01 # Cell size
+    dt = dx / 6e8 # Time step size
     return np.sin(2 * np.pi * freq_in * dt * time_step)
 
 @timeit
 def main():
     total_time = 1000
-    fdtd = Grid(shape = (200,None), Courant_number=0.50, rel_permitivity=4)
+    fdtd = Grid(shape = (200,None), rel_permitivity=4, Normalised_E_field=True)
     fdtd.create_dielectric([100,200])
     fdtd.set_source(sinusoidal, 0)
     fdtd.run(total_time)
