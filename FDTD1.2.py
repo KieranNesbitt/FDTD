@@ -5,6 +5,7 @@ from functools import wraps
 import time
 import scipy.signal as signal
 import multiprocessing as mp
+import json
 
 def timeit(func):
     @wraps(func)
@@ -80,6 +81,11 @@ class Grid:
         loss = (0.01 / 6e8)*self.conductivity/(2*self.rel_permitivity*8.854e-12)
         self.loss_array[pos[0]:pos[1]] = (1 - loss)/(1 + loss)
         self.rel_eps[pos[0]:pos[1]] = 0.5*(self.rel_permitivity*(1+loss))
+        metadata = {"Permitivity": self.rel_permitivity, "Conductivity": self.conductivity, "Position": pos}
+        with open('Dielectric.json', 'w') as convert_file: 
+            convert_file.write(json.dumps(metadata))
+        df = pd.DataFrame(self.rel_eps)
+        df.to_csv('Dielectric.csv', index=False, header=None)
 
     def boundary_conditions(self):
         """if self.pulse_time != None:
@@ -134,6 +140,7 @@ class Source:
                 c: np.float64 = 3e8,
                 spread: int = 1,
                 t0: int = 0,
+
                  ):
         self.rel_permitivity, self.rel_permibility = rel_permitivity, rel_permibility
         self.freq = freq
@@ -160,8 +167,8 @@ class Source:
 def main():
     total_time = 1000
     source = Source(rel_permitivity=4, freq = 400e6)
-    fdtd = Grid(shape = (401,None), rel_permitivity=4 , Normalised_E_field=True, conductivity= 0.04)
-    fdtd.create_lossy_medium([100,200])
+    fdtd = Grid(shape = (201,None), rel_permitivity=4 , Normalised_E_field=True, conductivity= 0.04)
+    fdtd.create_lossy_medium([100,201])
     fdtd.set_source(source.sinusoidal, 0)
     fdtd.run(total_time)
 if __name__ == "__main__":
