@@ -16,45 +16,51 @@ class visulise_data:
 
         self.Permitivity = metadata["Permitivity"]
         self.conductivity = metadata["Conductivity"]    
+        self.position = metadata["Position"]
 
         self.z_index = np.arange(0,np.shape(self.array_E)[1],1)
         self.array_H = df_H.values[:, :-1].astype(float)
 
     def plot_frame(self,frame):  
-        fig, axs = plt.subplots(3)
+        fig, axs = plt.subplots(2)
 
 
         fig.suptitle('EM Pulse')
-        axs[0].plot(self.array_E[frame])
-        axs[0].plot((0.5/self.df_Dielectric-1)/3, 'k--', linewidth=0.75)
-        axs[0].text(170, 0.5, '$\epsilon_r$ = {}'.format(self.Permitivity),
-        horizontalalignment='center')
-        axs[0].set_ylabel("$E_x$")
-        axs[1].plot(self.array_H[frame])
-        axs[1].set_ylabel("$H_y$")
-        axs[1].plot((0.5/self.df_Dielectric-1)/3, 'k--', linewidth=0.75)
-        axs[1].text(170, 0.5, '$\epsilon_r$ = {}'.format(self.Permitivity),
-        horizontalalignment='center')
+        axs[0].plot(self.z_index ,self.array_E[frame])
+        axs[0].axvspan(self.position[0],self.position[1], alpha=0.3, color='blue')
 
-        axs[2].plot(self.array_E[frame]+self.array_H[frame])
+        axs[0].text(self.z_index[-1], np.max(self.array_E), '$\epsilon_r$ = {}'.format(self.Permitivity),
+        ha='center', va = "center")
+        axs[0].set_ylabel("$E_x$")
+        axs[1].plot(self.z_index, self.array_H[frame])
+        axs[1].set_ylabel("$H_y$")
+        axs[1].axvspan(self.position[0],self.position[1], alpha=0.3, color='blue')
+        
+
+        """axs[2].plot(self.array_E[frame]+self.array_H[frame])
         axs[2].set_ylabel("$E_x + H_y$")
         axs[2].set_xlabel("Spatial Index along $z$-axis")
         axs[2].plot((0.5/self.df_Dielectric-1)/3, 'k--', linewidth=0.75)
-        axs[2].text(170, 0.5, '$\epsilon_r$ = {}'.format(self.Permitivity),
-        horizontalalignment='center')
+        """
 
 
         plt.show()
 
     def plot_animate(self):
-       
-        fig, ax = plt.subplot()
-        lines = [ax.plot([],[])[0] for _ in self.array_E]
+        fig, ax = plt.subplots()
+        ax.set_ylim(np.min(self.array_E)*1.1,np.max(self.array_E)*1.1)
+        ax.set_ylabel("$E_x$")
+        ax.axvspan(self.position[0],self.position[1], alpha=0.3, color='blue')
+        # Plot the initial state of z
+        line, = ax.plot(self.array_E[0])
 
+        def animate(i):
+            line.set_ydata(self.array_E[i])  # Update the data for the line
+            return line,
 
+        ani = FuncAnimation(fig, animate, frames=1001, interval=10, blit=True)
 
-        
-
+        plt.show()
 
     def plot_intensity(self, frame):
         fig, axs = plt.subplots(2)
@@ -74,4 +80,4 @@ class visulise_data:
         plt.show()
     
 Results = visulise_data()
-Results.plot_frame(1000)
+Results.plot_animate()
