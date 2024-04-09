@@ -182,12 +182,12 @@ class Source:
 def main():
     
     total_time = 1000
-    wavelength: float =300e-9
-    rel_permitivity: float = 4
+    wavelength: float =300e-10
+    rel_permitivity: float = 1.7
     source = Source(rel_permitivity=1, wavelength = wavelength)
     fdtd = Grid(shape = (201,None), rel_permitivity=rel_permitivity , Normalised_E_field=True, wavelength = wavelength, conductivity=0.04)
-    fdtd.create_lossy_medium([100,201])
-    fdtd.set_source(source.guassian, 0)
+    fdtd.create_dielectric([100,201])
+    fdtd.set_source(source.sinusoidal, 0)
     fdtd.run(total_time)
 if __name__ == "__main__":
     main()
