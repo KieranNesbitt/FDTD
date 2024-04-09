@@ -87,10 +87,9 @@ class Grid:
     def create_lossy_medium(self, pos = None):
         if pos == None:
             pos = [0, self.N_x]
-
-        loss = self.dt*self.conductivity/(self.rel_permitivity)
+        loss = (0.01 / 6e8)*self.conductivity/(2*self.rel_permitivity*8.854e-12)
         self.loss_array[pos[0]:pos[1]] = (1 - loss)/(1 + loss)
-        self.rel_eps[pos[0]:pos[1]] = (self.rel_permitivity*(1+loss))
+        self.rel_eps[pos[0]:pos[1]] = 0.5*(self.rel_permitivity*(1+loss))
 
         metadata = {"Permitivity": self.rel_permitivity, "Conductivity": self.conductivity, "Position": pos}
         with open('Dielectric.json', 'w') as convert_file: 
@@ -112,7 +111,7 @@ class Grid:
         self.position = position
 
     def update_source(self):
-        self.E_field[self.position] = self.source(self.time_step)
+        self.E_field[self.position] += self.source(self.time_step)
     
     def update_H(self):
         for index in self.m_index:
@@ -143,15 +142,14 @@ class Grid:
         df = pd.DataFrame(self.H_field_array)
         df.to_csv('H_field.csv', index=False, header=None)
 
-
 class Source:
     def __init__(self,
                 rel_permitivity: np.float16 = 1.0,
                 rel_permibility: np.float16 = 1.0,
                 wavelength: np.float16 = 1,
                 c: np.float64 = 3e8,
-                spread: int = 1,
-                t0: int = 0,
+                spread: int = 12,
+                t0: int = 40,
                 amplitude: float = 1
                 
                  ):
@@ -163,15 +161,14 @@ class Source:
         self.dx=wavelength/10
         self.dt = self.dx/(2*self.c)
         self.amplitude = amplitude
+
     def guassian(self,time_step): 
-        t0 =40
-        spread = 12 
-        return np.exp(-0.5 * ((t0 - time_step) / spread) ** 2)
+        return np.exp(-0.5 * ((self.t0-time_step) / self.spread) ** 2)
 
     def Guassian_pulse(self,time_step):
         t0=40
         f0 = 100e6 #Hz
-        return np.exp(-(time_step-t0)**2/(2*time_step**2)*np.cos(2*np.pi*f0*(time_step-t0)))
+        return np.exp(-(time_step-t0)**2 / (2*time_step**2) * np.cos(2*np.pi*f0*(time_step-t0)))
 
     """def sinusoidal(self,time_step):
         return self.amplitude*np.sin(2 * np.pi * self.freq * self.dt * time_step)"""
@@ -183,12 +180,13 @@ class Source:
 
 @timeit
 def main():
+    
     total_time = 1000
     wavelength: float =300e-9
     rel_permitivity: float = 4
     source = Source(rel_permitivity=1, wavelength = wavelength)
-    fdtd = Grid(shape = (401,None), rel_permitivity=rel_permitivity , Normalised_E_field=True, wavelength = wavelength)
-    fdtd.create_dielectric([100,151])
+    fdtd = Grid(shape = (201,None), rel_permitivity=rel_permitivity , Normalised_E_field=True, wavelength = wavelength, conductivity=0.04)
+    fdtd.create_lossy_medium([100,201])
     fdtd.set_source(source.guassian, 0)
     fdtd.run(total_time)
 if __name__ == "__main__":

@@ -58,7 +58,7 @@ class visulise_data:
             line.set_ydata(self.array_E[i])  # Update the data for the line
             return line,
 
-        ani = FuncAnimation(fig, animate, frames=1001, interval=10, blit=True)
+        ani = FuncAnimation(fig, animate, frames=1001, interval=20, blit=True)
 
         plt.show()
 
