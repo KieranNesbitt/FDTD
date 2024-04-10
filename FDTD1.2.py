@@ -187,7 +187,7 @@ def main():
     source = Source(rel_permitivity=1, wavelength = wavelength)
     fdtd = Grid(shape = (201,None), rel_permitivity=rel_permitivity , Normalised_E_field=True, wavelength = wavelength, conductivity=0.04)
     fdtd.create_dielectric([100,201])
-    fdtd.set_source(source.sinusoidal, 0)
+    fdtd.set_source(source.guassian, 0)
     fdtd.run(total_time)
 if __name__ == "__main__":
     main()

@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from matplotlib.animation import FuncAnimation
+from matplotlib.animation import FuncAnimation, PillowWriter
 import json
 
 class visulise_data:
@@ -51,7 +51,7 @@ class visulise_data:
         ax.set_ylim(np.min(self.array_H)*1.1,np.max(self.array_E)*1.1)
         ax.set_ylabel("$Amplitude$")
         ax.set_xlabel("$z \ axis$")
-        ax.axvspan(self.position[0],self.position[1], alpha=0.3, color='blue')
+        ax.axvspan(self.position[0],self.position[1], alpha=0.3, color='blue', label = "$\epsilon_r={}$".format(self.Permitivity))
         
         # Plot the initial state of z
         line, = ax.plot(self.array_E[0], label = "Electric field")
@@ -61,10 +61,13 @@ class visulise_data:
             line2.set_ydata(self.array_H[i])
             return line,line2
         ax.legend(loc = "best")
-        ani = FuncAnimation(fig, animate, frames=1001, interval=20, blit=True)
-
+        ani = FuncAnimation(fig, animate, frames=1001, interval=10, blit=True)
+        """writer = PillowWriter(fps=15,
+                                 metadata=dict(artist='Me'),
+                                 bitrate=1800)
+        ani.save('EM_water.gif', writer=writer)"""
         plt.show()
-
+    
     def plot_intensity(self, frame):
         fig, axs = plt.subplots(2)
 
