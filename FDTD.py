@@ -21,7 +21,7 @@ def timeit(func):
 class Grid:
     def __init__(self,
                 shape: None,
-                cell_spacing: np.float16 = 0.001,
+                cell_spacing: np.float16 = 0.0001,
                 Normalised_E_field: bool = False,
                 wavelength: np.float16 = 1,
                 pml_thickness: int = 20,  
@@ -118,7 +118,7 @@ class Source:
                 rel_permibility: np.float16 = 1.0,
                 wavelength: np.float16 = 1,
                 c: np.float64 = 3e8,
-                spread: int = 12,
+                spread: int = 15,
                 t0: int = 40,
                 amplitude: float = 1
                 
@@ -145,9 +145,9 @@ class Source:
 
 def main():
     source = Source()
-    FDTD = Grid(shape = (201,None))
-    FDTD.set_source(source.guassian, position = [50], active_time = 90)
-    FDTD.add_dieletric(pos = (100,150), eps=1.7, conductivity=0.04)
+    FDTD = Grid(shape = (401,None))
+    FDTD.set_source(source.guassian, position = [100], active_time = 100)
+    FDTD.add_dieletric(pos = (150,250), eps=1.7, conductivity=0.04)
     FDTD.run(1000)
 
 if __name__ == "__main__":
