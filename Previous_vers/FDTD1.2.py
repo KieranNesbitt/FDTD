@@ -59,8 +59,7 @@ class Grid:
         
         self.H_field_list.append(np.copy(self.H_field))
 
-    def set_boundary_conditions(self, Low_BC= None, High_BC= None, pulse_time=None):
-        self.pulse_time = pulse_time
+    def set_boundary_conditions(self):
         self.boundary_low = [0, 0]
         self.boundary_high = [0, 0]        
 
@@ -99,10 +98,9 @@ class Grid:
         df.to_csv('Dielectric.csv', index=False, header=None)
 
     def boundary_conditions(self):
-        """if self.pulse_time != None:
-            if self.time_step >= self.pulse_time:"""
-        """self.E_field[0] = self.boundary_low.pop(0)
-        self.boundary_low.append(self.E_field[1])"""
+        
+        self.E_field[0] = self.boundary_low.pop(0)
+        self.boundary_low.append(self.E_field[1])
         self.E_field[self.N_x - 1] = self.boundary_high.pop(0)
         self.boundary_high.append(self.E_field[self.N_x - 2])
 
@@ -111,19 +109,18 @@ class Grid:
         self.position = position
 
     def update_source(self):
-        self.E_field[self.position] += self.source(self.time_step)
-    
-    def update_H(self):
-        for index in self.m_index:
-            self.H_field[index] = self.H_field[index] + self.Courant_number*(self.E_field[index + 1] - self.E_field[index])/self.impedance_0/self.rel_mu[index]
+        self.E_field[self.position] = self.source(self.time_step) + self.E_field[self.position]
     
     def update_E(self):
-        for index in self.m_index:
-            self.E_field[index] = self.E_field[index]*self.loss_array[index] + (self.Courant_number*self.rel_eps[index])*(self.H_field[index] - self.H_field[index-1])*self.impedance_0
+        for index in np.arange(1,self.N_x, 1):
+            self.E_field[index] = self.E_field[index]*self.loss_array[index] + (self.Courant_number*self.rel_eps[index])*(self.H_field[index-1] - 
+                                                                                                                          self.H_field[index])*self.impedance_0
+    def update_H(self):
+        for index in np.arange(0,self.N_x-1, 1):
+            self.H_field[index] = self.H_field[index] + self.Courant_number*(self.E_field[index] - self.E_field[index+1])/self.impedance_0/self.rel_mu[index]
     @timeit
     def run(self, total_time):
         self.time = np.arange(0,total_time+1, 1)
-        self.m_index = np.arange(0,self.N_x-1, 1)
         self.set_boundary_conditions()
         
         for self.time_step in self.time:
@@ -183,11 +180,11 @@ def main():
     
     total_time = 1000
     wavelength: float =300e-10
-    rel_permitivity: float = 1.7
-    source = Source(rel_permitivity=1, wavelength = wavelength)
-    fdtd = Grid(shape = (201,None), rel_permitivity=rel_permitivity , Normalised_E_field=True, wavelength = wavelength, conductivity=0.04)
-    fdtd.create_dielectric([100,201])
-    fdtd.set_source(source.guassian, 0)
+    rel_permitivity: float = 4
+    source = Source(rel_permitivity=4, wavelength = wavelength)
+    fdtd = Grid(shape = (200,None), rel_permitivity=rel_permitivity, wavelength = wavelength ,conductivity=0.04)
+    fdtd.create_dielectric([100,199])
+    fdtd.set_source(source.sinusoidal, 0)
     fdtd.run(total_time)
 if __name__ == "__main__":
     main()

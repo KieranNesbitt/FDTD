@@ -47,21 +47,21 @@ class visulise_data:
         plt.show()
 
     def plot_animate(self):
-        fig, ax = plt.subplots()
-        ax.set_ylim(np.min(self.array_H)*1.1,np.max(self.array_E)*1.1)
+        fig, ax = plt.subplots(1)
+        ax.set_ylim(np.min(self.array_E)*1.1,np.max(self.array_E)*1.1)
         ax.set_ylabel("$Amplitude$")
         ax.set_xlabel("$z \ axis$")
-        ax.axvspan(self.position[0],self.position[1], alpha=0.3, color='blue', label = "$\epsilon_r={}$".format(self.Permitivity))
-        
-        # Plot the initial state of z
+        if self.position is not None:
+            ax.axvspan(self.position[0],self.position[1], alpha=0.3, color='blue', label = "$\epsilon_r={} \\ \sigma ={}$".format(self.Permitivity,self.conductivity))
+#        ax2 = ax.twinx()
         line, = ax.plot(self.array_E[0], label = "Electric field")
-        line2, = ax.plot(self.array_E[0], label = "Magnetic field")
+#        line2, = ax2.plot(self.array_H[0], label = "Magnetic field")
         def animate(i):
-            line.set_ydata(self.array_E[i])  
-            line2.set_ydata(self.array_H[i])
-            return line,line2
+            line.set_ydata(self.array_E[i])
+#            line2.set_ydata(self.array_H[i])
+            return line, #,line2
         ax.legend(loc = "best")
-        ani = FuncAnimation(fig, animate, frames=1001, interval=10, blit=True)
+        ani = FuncAnimation(fig, animate, frames=1000, interval=10, blit=True)
         """writer = PillowWriter(fps=15,
                                  metadata=dict(artist='Me'),
                                  bitrate=1800)

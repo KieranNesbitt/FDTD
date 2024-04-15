@@ -5,7 +5,6 @@ from functools import wraps
 import time
 import scipy.signal as signal
 import multiprocessing as mp
-import json
 
 def timeit(func):
     @wraps(func)
@@ -27,12 +26,8 @@ class Grid:
                 total_time: int = 250,
                 cell_spacing: np.float16 = 0.01,
                 Normalised_E_field: bool = False,
-                conductivity: np.float16 = 0,
-                wavelength: np.float16 = 1,
-
+                conductivity: np.float16 = 1
                  ):
-        self.dx=wavelength/10
-        self.dt = self.dx/(2*3e8)
         self.rel_permitivity, self.rel_permibility = rel_permitivity, rel_permibility
         self.total_time = total_time
         self.impedance_0 = 1
@@ -69,15 +64,9 @@ class Grid:
             pos = [0,self.N_x]
 
         self.rel_eps[pos[0]:pos[1]] /= self.rel_permitivity
-
-
-        metadata = {"Permitivity": self.rel_permitivity, "Conductivity": self.conductivity, "Position": pos}
-        with open('Dielectric.json', 'w') as convert_file: 
-            convert_file.write(json.dumps(metadata))
-            
         df = pd.DataFrame(self.rel_eps)
         df.to_csv('Dielectric.csv', index=False, header=None)
-
+    
     def create_diamagentic(self, pos = None):
         if pos == None:
             pos = [0, self.N_x]
@@ -92,22 +81,11 @@ class Grid:
         self.loss_array[pos[0]:pos[1]] = (1 - loss)/(1 + loss)
         self.rel_eps[pos[0]:pos[1]] = 0.5*(self.rel_permitivity*(1+loss))
 
-        metadata = {"Permitivity": self.rel_permitivity, "Conductivity": self.conductivity, "Position": pos}
-        with open('Dielectric.json', 'w') as convert_file: 
-            convert_file.write(json.dumps(metadata))
-
-        df = pd.DataFrame(self.rel_eps)
-        df.to_csv('Dielectric.csv', index=False, header=None)
-
-    def create_alpha(self, pos = None):
-        if pos == None:
-            pos = [0,self.N_x]
-
     def boundary_conditions(self):
         """if self.pulse_time != None:
             if self.time_step >= self.pulse_time:"""
-        """self.E_field[0] = self.boundary_low.pop(0)
-        self.boundary_low.append(self.E_field[1])"""
+        self.E_field[0] = self.boundary_low.pop(0)
+        self.boundary_low.append(self.E_field[1])
         self.E_field[self.N_x - 1] = self.boundary_high.pop(0)
         self.boundary_high.append(self.E_field[self.N_x - 2])
 
@@ -124,7 +102,7 @@ class Grid:
     
     def update_E(self):
         for index in self.m_index:
-            self.E_field[index] = self.E_field[index]*self.alpha[index] + self.beta[index]*(self.H_field[index] - self.H_field[index-1])/self.dx
+            self.E_field[index] = self.E_field[index]*self.loss_array[index] + (self.Courant_number*self.rel_eps[index])*(self.H_field[index] - self.H_field[index-1])*self.impedance_0
     @timeit
     def run(self, total_time):
         self.time = np.arange(0,total_time+1, 1)
@@ -147,36 +125,31 @@ class Grid:
         df = pd.DataFrame(self.H_field_array)
         df.to_csv('H_field.csv', index=False, header=None)
 
+
 class Source:
     def __init__(self,
                 rel_permitivity: np.float16 = 1.0,
                 rel_permibility: np.float16 = 1.0,
-                wavelength: np.float16 = 1,
+                freq: np.float16 = 1,
                 c: np.float64 = 3e8,
-                spread: int = 12,
-                t0: int = 40,
-                amplitude: float = 1
-                
+                spread: int = 1,
+                t0: int = 0,
                  ):
         self.rel_permitivity, self.rel_permibility = rel_permitivity, rel_permibility
-        self.freq = c/wavelength
+        self.freq = freq
         self.c = c
         self.spread = spread
         self.t0 = t0
-        self.dx=wavelength/10
-        self.dt = self.dx/(2*self.c)
-        self.amplitude = amplitude
-
     def guassian(self,time_step): 
-        return np.exp(-0.5 * ((self.t0-time_step) / self.spread) ** 2)
+        t0 =40
+        spread = 12 
+        return np.exp(-0.5 * ((t0 - time_step) / spread) ** 2)
 
     def Guassian_pulse(self,time_step):
         t0=40
         f0 = 100e6 #Hz
-        return np.exp(-(time_step-t0)**2 / (2*time_step**2) * np.cos(2*np.pi*f0*(time_step-t0)))
+        return np.exp(-(time_step-t0)**2/(2*time_step**2)*np.cos(2*np.pi*f0*(time_step-t0)))
 
-    """def sinusoidal(self,time_step):
-        return self.amplitude*np.sin(2 * np.pi * self.freq * self.dt * time_step)"""
     def sinusoidal(self,time_step):
         freq_in =400e6
         dx = 0.01 # Cell size
@@ -185,14 +158,12 @@ class Source:
 
 @timeit
 def main():
-    
+
     total_time = 1000
-    wavelength: float =300e-10
-    rel_permitivity: float = 1.7
-    source = Source(rel_permitivity=1, wavelength = wavelength)
-    fdtd = Grid(shape = (201,None), rel_permitivity=rel_permitivity , Normalised_E_field=True, wavelength = wavelength, conductivity=0.04)
-    fdtd.create_dielectric([100,201])
-    fdtd.set_source(source.sinusoidal, 0)
+    source = Source(rel_permitivity=4, freq = 400e6)
+    fdtd = Grid(shape = (401,None), rel_permitivity=1 , Normalised_E_field=True, conductivity= 0)
+    fdtd.create_lossy_medium([100,200])
+    fdtd.set_source(source.guassian, 50)
     fdtd.run(total_time)
 if __name__ == "__main__":
     main()
