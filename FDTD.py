@@ -127,8 +127,8 @@ class Grid:
     def output_to_csv(self):#Mainly to allow for plotting the data whithout needing to re-run the simulation
         self.E_field_array = np.array(self.E_field_list)
         self.H_field_array = np.array(self.H_field_list)
-        write_csv(self.E_field_array, 'Data_files/E_field.csv')
-        write_csv(self.H_field_array, "Data_files/H_field.csv")
+        np.savetxt('Data_files/E_field.csv', self.E_field_array, delimiter=',')
+        np.savetxt('Data_files/H_field.csv', self.H_field_array, delimiter=',')
         write_json(self.dielectric_list, 'Meta_data/Dielectric.json', "a")
         
 
@@ -168,6 +168,7 @@ def main():
     FDTD = Grid(shape = (401,None))
     FDTD.set_source(source.guassian, position = [200], active_time = 100)
     FDTD.add_dieletric(pos = (225,250), eps=1.7, conductivity=0.04)
+    FDTD.add_dieletric(pos = (150,175), eps=1.7, conductivity=0.04)
     FDTD.run(1000)
 
 if __name__ == "__main__":
