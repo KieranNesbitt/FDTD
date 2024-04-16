@@ -167,8 +167,7 @@ def main():
     source = Source()
     FDTD = Grid(shape = (401,None))
     FDTD.set_source(source.guassian, position = [200], active_time = 100)
-    FDTD.add_dieletric(pos = (225,250), eps=1.7, conductivity=0.04)
-    FDTD.add_dieletric(pos = (150,175), eps=1.7, conductivity=0.04)
+    FDTD.add_dieletric(pos = (225,300), eps=1.7, conductivity=0.04)
     FDTD.run(1000)
 
 if __name__ == "__main__":
