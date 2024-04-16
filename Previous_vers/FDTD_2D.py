@@ -26,9 +26,10 @@ class Grid:
                 wavelength: np.float16 = 1,
                 pml_thickness: int = 20,  
                 pml_sigma_max: float = 10,  
+                Dimensions: int = 2
                  ):     
         self.Delta_z = cell_spacing
-        self.Delta_t = self.Delta_z/(2*3e8)
+        self.Delta_t = (1/np.sqrt(Dimensions))*self.Delta_z/(2*3e8)
         self.N_x,self.N_y = shape
         self.H_field = np.zeros((self.N_x,self.N_y), dtype=np.float64)
         self.E_field = np.zeros((self.N_x,self.N_y), dtype=np.float64)
@@ -38,6 +39,8 @@ class Grid:
         self.rel_eps = np.ones((self.N_x,self.N_y), dtype= np.float64)
         self.rel_mu = np.ones((self.N_x,self.N_y), dtype=np.float64)
         self.conductivity = np.zeros((self.N_x,self.N_y), dtype= np.float64)
+        with open('Dielectric.json', 'w') as convert_file:
+            pass
         
     def set_source(self, source, position=None, active_time: float = 1):
         self.source_active_time = active_time
@@ -88,7 +91,7 @@ class Grid:
             self.rel_eps[pos[0]:pos[1]] = eps
             self.conductivity[pos[0]:pos[1]] = conductivity 
         metadata = {"Permitivity": eps, "Conductivity": conductivity, "Position": pos}
-        with open('Dielectric.json', 'w') as convert_file: 
+        with open('Dielectric.json', 'a') as convert_file: 
             convert_file.write(json.dumps(metadata))
             
         df = pd.DataFrame(self.rel_eps)

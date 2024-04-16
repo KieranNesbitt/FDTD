@@ -6,17 +6,19 @@ import json
 
 class visulise_data:
     def __init__(self):
-        df_E = pd.read_csv("E_field.csv", header=None)
-        df_H = pd.read_csv("H_field.csv", header = None)
+        df_E = pd.read_csv("Data_files/E_field.csv", header=None)
+        df_H = pd.read_csv("Data_files/H_field.csv", header = None)
         plt.style.use("seaborn-v0_8")
-        self.df_Dielectric = pd.read_csv("Dielectric.csv", header=None)
+        self.df_Dielectric = pd.read_csv("Data_files/Dielectric.csv", header=None)
         self.array_E = df_E.values[:, :-1].astype(float)
-        with open('Dielectric.json') as json_file:
-            metadata: dict = json.load(json_file)
+        self.dielectric_list = []
 
-        self.Permitivity = metadata["Permitivity"]
-        self.conductivity = metadata["Conductivity"]    
-        self.position = metadata["Position"]
+        with open('Meta_data\Dielectric.json', 'r') as f:
+            data = json.load(f)
+
+        self.dielectric_list = []
+        for item in data:
+            self.dielectric_list.append({"Permitivity": item['Permitivity'], "Conductivity": item['Conductivity'], "Position": item['Position']})
 
         self.z_index = np.arange(0,np.shape(self.array_E)[1],1)
         self.array_H = df_H.values[:, :-1].astype(float)
@@ -51,8 +53,12 @@ class visulise_data:
         ax.set_ylim(np.min(self.array_E)*1.1,np.max(self.array_E)*1.1)
         ax.set_ylabel("$Amplitude$")
         ax.set_xlabel("$z \ axis$")
-        if self.position is not None:
-            ax.axvspan(self.position[0],self.position[1], alpha=0.3, color='blue', label = "$\epsilon_r={} \\ \sigma ={}$".format(self.Permitivity,self.conductivity))
+        for dielectric in self.dielectric_list:
+            permitivity = dielectric['Permitivity']
+            conductivity = dielectric['Conductivity']
+            position = dielectric['Position']
+            if position is not None:
+                ax.axvspan(position[0],position[1], alpha=0.3, color='blue', label = "$\epsilon_r={} \\ \sigma ={}$".format(permitivity,conductivity))
 #        ax2 = ax.twinx()
         line, = ax.plot(self.array_E[0], label = "Electric field")
 #        line2, = ax2.plot(self.array_H[0], label = "Magnetic field")

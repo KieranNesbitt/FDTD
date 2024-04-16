@@ -18,46 +18,63 @@ def timeit(func):
         return result
     return timeit_wrapper
 
+def write_csv(data, filename):
+    df = pd.DataFrame(data)
+    df.to_csv(filename, index=False, header=None)
+
+def write_json(data, filename, mode= "w"):
+    with open(filename, mode) as convert_file: 
+        convert_file.write(json.dumps(data, indent=4))
 class Grid:
     def __init__(self,
                 shape: None,
-                cell_spacing: np.float16 = 0.0001,
+                cell_spacing: np.float64 = 0.001,
                 Normalised_E_field: bool = False,
                 wavelength: np.float16 = 1,
                 pml_thickness: int = 20,  
                 pml_sigma_max: float = 10,  
-
+                Dimensions: int = 1,
                  ):     
         self.Delta_z = cell_spacing
-        self.Delta_t = self.Delta_z/(2*3e8)
+        self.Delta_t = 1/(np.sqrt(Dimensions))*(self.Delta_z/(2*3e8))
         self.N_x,self.N_y = shape
+        #Field arrays
+        ## Will be used to store the calc fields
         self.H_field = np.zeros(self.N_x, dtype=np.float64)
         self.E_field = np.zeros(self.N_x, dtype=np.float64)
+        #Lists will be appened at each time step
         self.E_field_list =[]
         self.H_field_list =[]
+
         #Material parameters
         self.rel_eps = np.ones(self.N_x, dtype= np.float64)
         self.rel_mu = np.ones(self.N_x, dtype=np.float64)
         self.conductivity = np.zeros(self.N_x, dtype= np.float64)
+        self.dielectric_list = []
+
+        with open('Meta_data/Dielectric.json', 'w') as convert_file: 
+            pass
         
-    def set_source(self, source, position = None, active_time: float = 1):
-        self.source_active_time = active_time
+    def set_source(self, source, position = None, active_time: float = 1): #Set the soruce parameters, using a class function as it allows for variables to set beforehand
+        self.source_active_time = active_time # Allows for the source to switched off after set time tick
         self.source_active = True
         self.source = source
         self.position = position
+        metadata = {"Active_time": active_time, "Position": position}
+        write_json(metadata, 'Meta_data/Source.json', "w")
 
-    def update_source(self):
+    def update_source(self): #Updates the electric field at self.position for each tick
         if self.source_active:
             self.E_field[self.position] = self.source(self.time_step)
-        if self.source_active_time <= self.time_step:
+        if self.source_active_time <= self.time_step:#Swicthes off at time selected 
+            ##prevents some weird refledctions off the source when reflected off dielectric 
             self.source_active = False
 
     def append_to_list(self):
         self.E_field_list.append(np.copy(self.E_field))
-        
-        self.H_field_list.append(np.copy(self.H_field))       
+        self.H_field_list.append(np.copy(self.H_field))   
 
-    def boundary_conditions(self):
+    def boundary_conditions(self):#Will update to allow for switching between different conditions but for now a simple ABC will be used
         self.E_field[0] = self.boundary_low.pop(0)
         self.boundary_low.append(self.E_field[1])
         self.E_field[self.N_x-1] = self.boundary_high.pop(0)
@@ -69,22 +86,26 @@ class Grid:
 
     def update_E(self):
         delta_E = self.H_field[1:]-self.H_field[:-1]
-        self.E_field[1:]=self.E_field[1:]*self.alpha[1:]+(self.beta[1:]/self.Delta_z)*(delta_E)
+        self.E_field[1:] = self.E_field[1:]*self.alpha[1:]+(self.beta[1:]/self.Delta_z)*(delta_E)
 
-    def add_dieletric(self, pos: tuple=None, eps: float=1, conductivity: float = 0):
-        if pos is not None:
+    def add_dieletric(self, pos: tuple=None, eps: np.float16 =1, conductivity: float = 0, mu: np.float16 = 1):
+        if pos is not None:#Catch term if pos is not specified 
             self.rel_eps[pos[0]:pos[1]] = eps
+            self.rel_mu[pos[0]:pos[1]] = mu
             self.conductivity[pos[0]:pos[1]] = conductivity 
+        
+        #The following exports meta data and values of the dielectric for plotting
         metadata = {"Permitivity": eps, "Conductivity": conductivity, "Position": pos}
-        with open('Dielectric.json', 'w') as convert_file: 
-            convert_file.write(json.dumps(metadata))
-            
+        self.dielectric_list.append(metadata)
         df = pd.DataFrame(self.rel_eps)
-        df.to_csv('Dielectric.csv', index=False, header=None)
+        df.to_csv('Data_files/Dielectric.csv', index=False, header=None)
 
-    def define_constants(self):
-        self.alpha = (1-self.Delta_t*self.conductivity*(2*self.rel_eps*8.5418782e-12)**-1)/(1+self.Delta_t*self.conductivity*(2*self.rel_eps*85418782e-12)**-1)
-        self.beta = (self.Delta_t*(self.rel_eps*8.85418782e-12)**-1)/(1+self.Delta_t*self.conductivity*(2*self.rel_eps*85418782e-12)**-1)
+    #Constans provided by (Insert source)
+    def define_constants(self):# Will need to include to update delta_t when switching to above 1D simulaiton 
+        self.alpha = ((1-self.Delta_t*self.conductivity*(2*self.rel_eps*8.5418782e-12)**-1)/
+                      (1+self.Delta_t*self.conductivity*(2*self.rel_eps*85418782e-12)**-1))
+        self.beta = ((self.Delta_t*(self.rel_eps*8.85418782e-12)**-1)
+                     /(1+self.Delta_t*self.conductivity*(2*self.rel_eps*85418782e-12)**-1))
         self.gamma = (self.Delta_t)/(self.Delta_z*self.rel_mu*1.25663706e-6)
 
     @timeit
@@ -102,15 +123,14 @@ class Grid:
             self.append_to_list()
         self.output_to_csv()
 
-    @timeit
-    def output_to_csv(self):
+    @timeit  
+    def output_to_csv(self):#Mainly to allow for plotting the data whithout needing to re-run the simulation
         self.E_field_array = np.array(self.E_field_list)
         self.H_field_array = np.array(self.H_field_list)
-        df = pd.DataFrame(self.E_field_array)
-        df.to_csv('E_field.csv', index=False, header=None)
-
-        df = pd.DataFrame(self.H_field_array)
-        df.to_csv('H_field.csv', index=False, header=None)
+        write_csv(self.E_field_array, 'Data_files/E_field.csv')
+        write_csv(self.H_field_array, "Data_files/H_field.csv")
+        write_json(self.dielectric_list, 'Meta_data/Dielectric.json', "a")
+        
 
 class Source:
     def __init__(self,
@@ -146,8 +166,8 @@ class Source:
 def main():
     source = Source()
     FDTD = Grid(shape = (401,None))
-    FDTD.set_source(source.guassian, position = [100], active_time = 100)
-    FDTD.add_dieletric(pos = (150,250), eps=1.7, conductivity=0.04)
+    FDTD.set_source(source.guassian, position = [200], active_time = 100)
+    FDTD.add_dieletric(pos = (225,250), eps=1.7, conductivity=0.04)
     FDTD.run(1000)
 
 if __name__ == "__main__":
