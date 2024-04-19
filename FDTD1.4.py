@@ -99,7 +99,7 @@ class Grid:
         self.dielectric_list.append(metadata)
         df = pd.DataFrame(self.rel_eps)
         df.to_csv('Data_files/Dielectric.csv', index=False, header=None)
-
+        
     @timeit
     def run(self, total_time): 
         self.boundary_low = [0, 0]
@@ -150,9 +150,9 @@ class Source:
 def main():#In this Simulation E is normalised by setting the eliminating the electric and magnetic constant from both E and H
     ##Done so that the amplitudes match
 
-    source = Source(cell_spacing=cellspacing, freq=700e6)
+    source = Source(cell_spacing=cellspacing, freq=500e6)
     FDTD = Grid(shape = (201,None), cell_spacing=cellspacing)
-    FDTD.set_source(source.sinusodial, position = 100)
+    FDTD.set_source(source.guassian_40, position = 100)
     #FDTD.add_dieletric(pos = (100,150), eps=1.7, conductivity=0)
     FDTD.run(1000)
 
