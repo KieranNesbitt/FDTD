@@ -65,14 +65,14 @@ class Grid:
 
         self.rel_eps[pos[0]:pos[1]] /= self.rel_permitivity
         df = pd.DataFrame(self.rel_eps)
-        df.to_csv('Dielectric.csv', index=False, header=None)
+        df.to_csv('Data_files\Dielectric.csv', index=False, header=None)
     
     def create_diamagentic(self, pos = None):
         if pos == None:
             pos = [0, self.N_x]
         self.rel_mu[pos[0]:pos[1]] /=self.rel_permibility
         df = pd.DataFrame(self.rel_mu)
-        df.to_csv('Diamagnetic.csv', index=False, header=None)
+        df.to_csv('Data_files\Diamagnetic.csv', index=False, header=None)
         
     def create_lossy_medium(self, pos = None):
         if pos == None:
@@ -120,10 +120,10 @@ class Grid:
         self.E_field_array = np.array(self.E_field_list)
         self.H_field_array = np.array(self.H_field_list)
         df = pd.DataFrame(self.E_field_array)
-        df.to_csv('E_field.csv', index=False, header=None)
+        df.to_csv('Data_files\E_field.csv', index=False, header=None)
 
         df = pd.DataFrame(self.H_field_array)
-        df.to_csv('H_field.csv', index=False, header=None)
+        df.to_csv('Data_files\H_field.csv', index=False, header=None)
 
 
 class Source:
@@ -163,7 +163,7 @@ def main():
     source = Source(rel_permitivity=4, freq = 400e6)
     fdtd = Grid(shape = (401,None), rel_permitivity=1 , Normalised_E_field=True, conductivity= 0)
     fdtd.create_lossy_medium([100,200])
-    fdtd.set_source(source.guassian, 50)
+    fdtd.set_source(source.guassian, 0)
     fdtd.run(total_time)
 if __name__ == "__main__":
     main()

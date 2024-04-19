@@ -69,11 +69,11 @@ class Grid:
 
         self.rel_eps[pos[0]:pos[1]] /= self.rel_permitivity
         metadata = {"Permitivity": self.rel_permitivity, "Conductivity": self.conductivity, "Position": pos}
-        with open('Dielectric.json', 'w') as convert_file: 
+        with open('Meta_data\Dielectric.json', 'w') as convert_file: 
             convert_file.write(json.dumps(metadata))
             
         df = pd.DataFrame(self.rel_eps)
-        df.to_csv('Dielectric.csv', index=False, header=None)
+        df.to_csv('Data_files\Dielectric.csv', index=False, header=None)
 
     
     def create_diamagentic(self, pos = None):
@@ -81,7 +81,7 @@ class Grid:
             pos = [0, self.N_x]
         self.rel_mu[pos[0]:pos[1]] /=self.rel_permibility
         df = pd.DataFrame(self.rel_mu)
-        df.to_csv('Diamagnetic.csv', index=False, header=None)
+        df.to_csv('Data_files\Diamagnetic.csv', index=False, header=None)
         
     def create_lossy_medium(self, pos = None):
         if pos == None:
@@ -91,11 +91,11 @@ class Grid:
         self.rel_eps[pos[0]:pos[1]] = 0.5*(self.rel_permitivity*(1+loss))
 
         metadata = {"Permitivity": self.rel_permitivity, "Conductivity": self.conductivity, "Position": pos}
-        with open('Dielectric.json', 'w') as convert_file: 
+        with open('Meta_data\Dielectric.json', 'w') as convert_file: 
             convert_file.write(json.dumps(metadata))
 
         df = pd.DataFrame(self.rel_eps)
-        df.to_csv('Dielectric.csv', index=False, header=None)
+        df.to_csv('Data_files\Dielectric.csv', index=False, header=None)
 
     def boundary_conditions(self):
         
@@ -112,11 +112,11 @@ class Grid:
         self.E_field[self.position] = self.source(self.time_step) + self.E_field[self.position]
     
     def update_E(self):
-        for index in np.arange(1,self.N_x, 1):
+        for index in np.arange(1,self.N_x):
             self.E_field[index] = self.E_field[index]*self.loss_array[index] + (self.Courant_number*self.rel_eps[index])*(self.H_field[index-1] - 
                                                                                                                           self.H_field[index])*self.impedance_0
     def update_H(self):
-        for index in np.arange(0,self.N_x-1, 1):
+        for index in np.arange(0,self.N_x-1):
             self.H_field[index] = self.H_field[index] + self.Courant_number*(self.E_field[index] - self.E_field[index+1])/self.impedance_0/self.rel_mu[index]
     @timeit
     def run(self, total_time):
@@ -134,10 +134,10 @@ class Grid:
         self.E_field_array = np.array(self.E_field_list)
         self.H_field_array = np.array(self.H_field_list)
         df = pd.DataFrame(self.E_field_array)
-        df.to_csv('E_field.csv', index=False, header=None)
+        df.to_csv('Data_files\E_field.csv', index=False, header=None)
 
         df = pd.DataFrame(self.H_field_array)
-        df.to_csv('H_field.csv', index=False, header=None)
+        df.to_csv('Data_files\H_field.csv', index=False, header=None)
 
 class Source:
     def __init__(self,
@@ -145,7 +145,7 @@ class Source:
                 rel_permibility: np.float16 = 1.0,
                 wavelength: np.float16 = 1,
                 c: np.float64 = 3e8,
-                spread: int = 12,
+                spread: int = 15,
                 t0: int = 40,
                 amplitude: float = 1
                 
@@ -183,8 +183,8 @@ def main():
     rel_permitivity: float = 4
     source = Source(rel_permitivity=4, wavelength = wavelength)
     fdtd = Grid(shape = (200,None), rel_permitivity=rel_permitivity, wavelength = wavelength ,conductivity=0.04)
-    fdtd.create_dielectric([100,199])
-    fdtd.set_source(source.sinusoidal, 0)
+    #fdtd.create_dielectric([100,199])
+    fdtd.set_source(source.guassian, 1)
     fdtd.run(total_time)
 if __name__ == "__main__":
     main()

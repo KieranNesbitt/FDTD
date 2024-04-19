@@ -44,13 +44,11 @@ class visulise_data:
         axs[2].set_xlabel("Spatial Index along $z$-axis")
         axs[2].plot((0.5/self.df_Dielectric-1)/3, 'k--', linewidth=0.75)
         """
-
-
         plt.show()
 
     def plot_animate(self):
         fig, ax = plt.subplots(1)
-        ax.set_ylim(np.min(self.array_E)*1.1,np.max(self.array_E)*1.1)
+        ax.set_ylim(np.min(self.array_H)*1.1,np.max(self.array_E)*1.1)
         ax.set_ylabel("$Amplitude$")
         ax.set_xlabel("$z \ axis$")
         for dielectric in self.dielectric_list:
@@ -59,13 +57,11 @@ class visulise_data:
             position = dielectric['Position']
             if position is not None:
                 ax.axvspan(position[0],position[1], alpha=0.3, color='blue', label = "$\epsilon_r={} \\ \sigma ={}$".format(permitivity,conductivity))
-#        ax2 = ax.twinx()
+        
         line, = ax.plot(self.array_E[0], label = "Electric field")
-#        line2, = ax2.plot(self.array_H[0], label = "Magnetic field")
         def animate(i):
             line.set_ydata(self.array_E[i])
-#            line2.set_ydata(self.array_H[i])
-            return line, #,line2
+            return line,    
         ax.legend(loc = "best")
         ani = FuncAnimation(fig, animate, frames=1000, interval=10, blit=True)
         """writer = PillowWriter(fps=15,

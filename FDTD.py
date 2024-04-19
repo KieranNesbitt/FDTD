@@ -25,18 +25,19 @@ def write_csv(data, filename):
 def write_json(data, filename, mode= "w"):
     with open(filename, mode) as convert_file: 
         convert_file.write(json.dumps(data, indent=4))
+
 class Grid:
     def __init__(self,
                 shape: None,
                 cell_spacing: np.float64 = 0.001,
-                Normalised_E_field: bool = False,
-                wavelength: np.float16 = 1,
-                pml_thickness: int = 20,  
-                pml_sigma_max: float = 10,  
                 Dimensions: int = 1,
-                 ):     
-        self.Delta_z = cell_spacing
-        self.Delta_t = 1/(np.sqrt(Dimensions))*(self.Delta_z/(2*3e8))
+                courant_number: float = 0.5,
+                 ):
+        self.mu_0 = 1.25663706e-6
+        self.eps_0 = 8.85418782e-12
+        self.cell_spacing = cell_spacing
+        self.courant_number = courant_number
+        self.delta_t = np.sqrt(self.mu_0*self.eps_0)*self.courant_number*self.cell_spacing
         self.N_x,self.N_y = shape
         #Field arrays
         ## Will be used to store the calc fields
@@ -56,37 +57,36 @@ class Grid:
             pass
         
     def set_source(self, source, position = None, active_time: float = 1): #Set the soruce parameters, using a class function as it allows for variables to set beforehand
-        self.source_active_time = active_time # Allows for the source to switched off after set time tick
-        self.source_active = True
         self.source = source
-        self.position = position
+        self.position_source = position
         metadata = {"Active_time": active_time, "Position": position}
         write_json(metadata, 'Meta_data/Source.json', "w")
 
     def update_source(self): #Updates the electric field at self.position for each tick
-        if self.source_active:
-            self.E_field[self.position] = self.source(self.time_step)
-        if self.source_active_time <= self.time_step:#Swicthes off at time selected 
-            ##prevents some weird refledctions off the source when reflected off dielectric 
-            self.source_active = False
-
-    def append_to_list(self):
-        self.E_field_list.append(np.copy(self.E_field))
-        self.H_field_list.append(np.copy(self.H_field))   
+        self.E_field[self.position_source] += self.source(self.time_step)
 
     def boundary_conditions(self):#Will update to allow for switching between different conditions but for now a simple ABC will be used
         self.E_field[0] = self.boundary_low.pop(0)
         self.boundary_low.append(self.E_field[1])
         self.E_field[self.N_x-1] = self.boundary_high.pop(0)
         self.boundary_high.append(self.E_field[self.N_x - 2])
-    
-    def update_H(self):
-        delta_E: np.float64 = self.E_field[1:] - self.E_field[:-1]
-        self.H_field[:-1] += self.gamma[:-1] * delta_E
+
+    def append_to_list(self):
+        self.E_field_list.append(np.copy(self.E_field))
+        self.H_field_list.append(np.copy(self.H_field))   
 
     def update_E(self):
-        delta_E = self.H_field[1:]-self.H_field[:-1]
-        self.E_field[1:] = self.E_field[1:]*self.alpha[1:]+(self.beta[1:]/self.Delta_z)*(delta_E)
+        for m in np.arange(1,self.N_x):
+            self.E_field[m] = self.E_field[m]*self.alpha[m] + self.beta[m]*(self.H_field[m-1] - self.H_field[m])
+
+    def update_H(self):
+        for m in np.arange(0,self.N_x-1):
+            self.H_field[m] = self.H_field[m] + self.courant_number*(self.E_field[m] - self.E_field[m+1])
+    
+    def define_constants(self):
+        self.loss = self.delta_t*self.conductivity/(2*self.eps_0*self.rel_eps)
+        self.alpha = (1-self.loss)/(1+self.loss)
+        self.beta = self.courant_number/(self.rel_eps*(1+self.loss))
 
     def add_dieletric(self, pos: tuple=None, eps: np.float16 =1, conductivity: float = 0, mu: np.float16 = 1):
         if pos is not None:#Catch term if pos is not specified 
@@ -100,27 +100,19 @@ class Grid:
         df = pd.DataFrame(self.rel_eps)
         df.to_csv('Data_files/Dielectric.csv', index=False, header=None)
 
-    #Constans provided by (Insert source)
-    def define_constants(self):# Will need to include to update delta_t when switching to above 1D simulaiton 
-        self.alpha = ((1-self.Delta_t*self.conductivity*(2*self.rel_eps*8.5418782e-12)**-1)/
-                      (1+self.Delta_t*self.conductivity*(2*self.rel_eps*85418782e-12)**-1))
-        self.beta = ((self.Delta_t*(self.rel_eps*8.85418782e-12)**-1)
-                     /(1+self.Delta_t*self.conductivity*(2*self.rel_eps*85418782e-12)**-1))
-        self.gamma = (self.Delta_t)/(self.Delta_z*self.rel_mu*1.25663706e-6)
-
     @timeit
-    def run(self, total_time):
-        self.define_constants()
+    def run(self, total_time): 
         self.boundary_low = [0, 0]
         self.boundary_high = [0, 0]
+        self.define_constants()
         for self.time_step in np.arange(0,total_time,1):
 
-            self.boundary_conditions()
-            self.update_H()
             self.update_E()
             self.update_source()
-
+            self.boundary_conditions()
+            self.update_H()
             self.append_to_list()
+            
         self.output_to_csv()
 
     @timeit  
@@ -131,45 +123,47 @@ class Grid:
         np.savetxt('Data_files/H_field.csv', self.H_field_array, delimiter=',')
         write_json(self.dielectric_list, 'Meta_data/Dielectric.json', "a")
         
-
 class Source:
     def __init__(self,
-                rel_permitivity: np.float16 = 1.0,
-                rel_permibility: np.float16 = 1.0,
-                wavelength: np.float16 = 1,
-                c: np.float64 = 3e8,
-                spread: int = 15,
-                t0: int = 40,
-                amplitude: float = 1
-                
+                freq: np.float64 = 1,
+                cell_spacing: np.float64 = 1,
+                courant_number: np.float64 = 0.5
                  ):
-        self.rel_permitivity, self.rel_permibility = rel_permitivity, rel_permibility
-        self.freq = c/wavelength
-        self.c = c
-        self.spread = spread
-        self.t0 = t0
-        self.dx=wavelength/10
-        self.dt = self.dx/(2*self.c)
-        self.amplitude = amplitude
+        self.mu_0 = 1.25663706e-6
+        self.eps_0 = 8.85418782e-12
+        self.freq = freq
+        self.cell_spacing = cell_spacing
+        self.courant_number = courant_number
+        self.delta_t = np.sqrt(self.mu_0*self.eps_0)*self.courant_number*self.cell_spacing
 
-    def guassian(self,time_step): 
-        return np.exp(-0.5 * ((self.t0-time_step) / self.spread) ** 2)
+    def guassian_40(self,time_step): 
+        t0 =40
+        spread = 12
+        return np.exp(-0.5*((t0- time_step)/spread)**2)
 
-    """def sinusoidal(self,time_step):
-        return self.amplitude*np.sin(2 * np.pi * self.freq * self.dt * time_step)"""
-    def sinusoidal(self,time_step):
-        freq_in =400e6
-        dx = 0.01 # Cell size
-        dt = dx / 6e8 # Time step size
-        return np.sin(2 * np.pi * freq_in * dt * time_step)
+    def sinusodial(self, time_step):
+        ddx = .01
+        self.delta_t =self.cell_spacing/6e8
+        return np.sin(2*np.pi*self.freq*self.delta_t*time_step)
+        
 
-def main():
-    source = Source()
-    FDTD = Grid(shape = (401,None))
-    FDTD.set_source(source.guassian, position = [200], active_time = 100)
-    FDTD.add_dieletric(pos = (225,300), eps=1.7, conductivity=0.04)
+def main():#In this Simulation E is normalised by setting the eliminating the electric and magnetic constant from both E and H
+    ##Done so that the amplitudes match
+
+    source = Source(cell_spacing=cellspacing, freq=700e6)
+    FDTD = Grid(shape = (201,None), cell_spacing=cellspacing)
+    FDTD.set_source(source.sinusodial, position = 100)
+    #FDTD.add_dieletric(pos = (100,150), eps=1.7, conductivity=0)
     FDTD.run(1000)
 
 if __name__ == "__main__":
+    cellspacing = 0.01
     main()
 #Old code
+"""def update_H(self):
+        delta_E: np.float64 = self.E_field[1:] - self.E_field[:-1]
+        self.H_field[:-1] += self.gamma[:-1] * delta_E
+
+    def update_E(self):
+        delta_E = self.H_field[1:]-self.H_field[:-1]
+        self.E_field[1:] = self.E_field[1:]*self.alpha[1:]+(self.beta[1:]/self.Delta_z)*(delta_E)"""
