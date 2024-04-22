@@ -29,7 +29,7 @@ def write_json(data, filename, mode= "w"):
 class Grid:
     def __init__(self,
                 shape: tuple = None,
-                cell_spacing: np.float64 = 0.001,
+                cell_spacing: np.float64 = None,
                 Dimensions: int = 1,
                 courant_number: float = 0.5,
                  ):
@@ -44,6 +44,7 @@ class Grid:
         self.H_field = np.zeros(self.N_x, dtype=np.float64)
         self.E_field = np.zeros(self.N_x, dtype=np.float64)
         self.E_flux = np.zeros(self.N_x, dtype=np.float64)
+        self.I = np.zeros(self.N_x, dtype=np.float64)
         #Lists will be appened at each time step
         self.E_field_list =[]
         self.H_field_list =[]
@@ -64,7 +65,7 @@ class Grid:
         write_json(metadata, 'Meta_data/Source.json', "w")
 
     def update_source(self): #Updates the electric field at self.position for each tick
-        self.E_field[self.position_source] += self.source(self.time_step)
+        self.E_flux[self.position_source] += self.source(self.time_step)
 
     def boundary_conditions(self):#Will update to allow for switching between different conditions but for now a simple ABC will be used
         self.E_field[0] = self.boundary_low.pop(0)
@@ -76,18 +77,23 @@ class Grid:
         self.E_field_list.append(np.copy(self.E_field))
         self.H_field_list.append(np.copy(self.H_field))   
 
+    def update_E_flux(self):
+        for m in np.arange(1, self.N_x):
+            self.E_flux[m] = self.E_flux[m] + self.courant_number*(self.H_field[m-1] - self.H_field[m])
+
     def update_E(self):
-        for m in np.arange(1,self.N_x):
-            self.E_field[m] = self.E_field[m]*self.alpha[m] + self.beta[m]*(self.H_field[m-1] - self.H_field[m])
+        for m in np.arange(0,self.N_x-1):
+            self.E_field[m] = self.alpha[m] * (self.E_flux[m] - self.I[m])
+            self.I[m] = self.I[m] + self.beta[m]*self.E_field[m]
 
     def update_H(self):
         for m in np.arange(0,self.N_x-1):
             self.H_field[m] = self.H_field[m] + self.courant_number*(self.E_field[m] - self.E_field[m+1])
     
     def define_constants(self):
-        self.loss = self.delta_t*self.conductivity/(2*self.eps_0*self.rel_eps)
-        self.alpha = (1-self.loss)/(1+self.loss)
-        self.beta = self.courant_number/(self.rel_eps*(1+self.loss))
+        #self.loss = self.delta_t*self.conductivity/(2*self.eps_0*self.rel_eps)
+        self.alpha = 1/(self.rel_eps + (self.conductivity*self.delta_t/self.eps_0))
+        self.beta = self.conductivity*(self.delta_t/self.eps_0)
 
     def add_dieletric(self, pos: tuple=None, eps: np.float16 =1, conductivity: float = 0, mu: np.float16 = 1):
         if pos is not None:#Catch term if pos is not specified 
@@ -107,11 +113,11 @@ class Grid:
         self.boundary_high = [0, 0]
         self.define_constants()
         for self.time_step in np.arange(0,total_time):
-            self.update_H()
-            self.update_E()
+            self.update_E_flux()
             self.update_source()
+            self.update_E()
             self.boundary_conditions()
-            
+            self.update_H()
             self.append_to_list()
             
         self.output_to_csv()
@@ -157,16 +163,17 @@ class Source:
 def main():#In this Simulation E is normalised by eliminating the electric and magnetic constant from both E and H
     ##Done so that the amplitudes match
 
-    source = Source(cell_spacing=cellspacing, freq=500e6, tau=500)
-    FDTD = Grid(shape = (1001,None), cell_spacing=cellspacing)
+    source = Source(cell_spacing=cellspacing, freq=500e6, tau=100, Amplitude=1)
+    FDTD = Grid(shape = shape, cell_spacing=cellspacing)
     FDTD.set_source(source.sinusodial, position = source_position)
-    #FDTD.add_dieletric(pos = (150,200), eps=1.7)
+    #FDTD.add_dieletric(pos = (200,500), eps=1.7)
     FDTD.run(time_max)
 
 if __name__ == "__main__":
-    source_position = 500
+    shape = (501,None)
+    source_position: int = 1
     cellspacing = 0.01
-    time_max = 1000
+    time_max = 1001
     main()
 #Old code
 """def update_H(self):
