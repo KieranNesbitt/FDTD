@@ -24,33 +24,26 @@ class visulise_data:
         self.array_H = df_H.values[:, :-1].astype(float)
 
     def plot_frame(self,frame):  
-        fig, axs = plt.subplots(2)
-
-
-        fig.suptitle('EM Pulse')
-        axs[0].plot(self.z_index ,self.array_E[frame])
-        axs[0].axvspan(self.position[0],self.position[1], alpha=0.3, color='blue')
-
-        axs[0].text(self.z_index[-1], np.max(self.array_E), '$\epsilon_r$ = {}'.format(self.Permitivity),
-        ha='center', va = "center")
-        axs[0].set_ylabel("$E_x$")
-        axs[1].plot(self.z_index, self.array_H[frame])
-        axs[1].set_ylabel("$H_y$")
-        axs[1].axvspan(self.position[0],self.position[1], alpha=0.3, color='blue')
+        fig, ax = plt.subplots(1)
+        ax.set_ylim(np.min(self.array_H)*1.1,np.max(self.array_E)*1.1)
+        ax.set_ylabel("$Amplitude$")
+        ax.set_xlabel("$Spatial \ Index$")
+        for dielectric in self.dielectric_list:
+            permitivity = dielectric['Permitivity']
+            conductivity = dielectric['Conductivity']
+            position = dielectric['Position']
+            if position is not None:
+                ax.axvspan(position[0],position[1], alpha=0.3, color='blue', label = "$\epsilon_r={} \\ \sigma ={}$".format(permitivity,conductivity))
         
+        ax.plot(self.array_E[frame])
 
-        """axs[2].plot(self.array_E[frame]+self.array_H[frame])
-        axs[2].set_ylabel("$E_x + H_y$")
-        axs[2].set_xlabel("Spatial Index along $z$-axis")
-        axs[2].plot((0.5/self.df_Dielectric-1)/3, 'k--', linewidth=0.75)
-        """
         plt.show()
 
     def plot_animate(self):
         fig, ax = plt.subplots(1)
         ax.set_ylim(np.min(self.array_H)*1.1,np.max(self.array_E)*1.1)
         ax.set_ylabel("$Amplitude$")
-        ax.set_xlabel("$z \ axis$")
+        ax.set_xlabel("$Spatial \ Index$")
         for dielectric in self.dielectric_list:
             permitivity = dielectric['Permitivity']
             conductivity = dielectric['Conductivity']
