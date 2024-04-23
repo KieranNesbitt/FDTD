@@ -41,7 +41,7 @@ class visulise_data:
 
     def plot_animate(self):
         fig, ax = plt.subplots(1)
-        ax.set_ylim(np.min(self.array_H)*1.1,np.max(self.array_E)*1.1)
+        ax.set_ylim(np.min(self.array_E)*1.1,np.max(self.array_E)*1.1)
         ax.set_ylabel("$Amplitude$")
         ax.set_xlabel("$Spatial \ Index$")
         for dielectric in self.dielectric_list:
