@@ -30,7 +30,7 @@ class Grid:
     def __init__(self,
                 shape: tuple = None,
                 cell_spacing: np.float64 = 0.001,
-                Dimensions: int = 1,
+                Dimensions: int = 2,
                 courant_number: float = 0.5,
                  ):
         self.mu_0 = 1.25663706e-6
@@ -41,30 +41,33 @@ class Grid:
         self.N_x,self.N_y = shape
         #Field arrays
         ## Will be used to store the calc fields
-        self.H_field = np.zeros(self.N_x, dtype=np.float64)
-        self.E_field = np.zeros(self.N_x, dtype=np.float64)
-        self.E_flux = np.zeros(self.N_x, dtype=np.float64)
+        self.H_field_x = np.zeros((self.N_x, self.N_y), dtype=np.float64)
+        self.H_field_y = np.zeros((self.N_x, self.N_y), dtype=np.float64)
+        self.E_field_x = np.zeros((self.N_x, self.N_y), dtype=np.float64)
+        self.E_flux_x = np.zeros((self.N_x, self.N_y), dtype=np.float64)
         #Lists will be appened at each time step
         self.E_field_list =[]
-        self.H_field_list =[]
+        self.H_field_list_x =[]
+        self.H_field_list_y =[]
 
         #Material parameters
-        self.rel_eps = np.ones(self.N_x, dtype= np.float64)
-        self.rel_mu = np.ones(self.N_x, dtype=np.float64)
-        self.conductivity = np.zeros(self.N_x, dtype= np.float64)
+        self.rel_eps = np.ones((self.N_x, self.N_y), dtype= np.float64)
+        self.rel_mu = np.ones((self.N_x, self.N_y), dtype=np.float64)
+        self.conductivity = np.zeros((self.N_x, self.N_y), dtype= np.float64)
         self.dielectric_list = []
 
-        with open('Meta_data/Dielectric.json', 'w') as convert_file: 
+        with open('Meta_data/Dielectric_2D.json', 'w') as convert_file: 
             pass
         
     def set_source(self, source, position = None, active_time: float = 1): #Set the soruce parameters, using a class function as it allows for variables to set beforehand
         self.source = source
         self.position_source = position
         metadata = {"Active_time": active_time, "Position": position}
-        write_json(metadata, 'Meta_data/Source.json', "w")
+        write_json(metadata, 'Meta_data/Source_2D.json', "w")
 
     def update_source(self): #Updates the electric field at self.position for each tick
-        self.E_field[self.position_source] += self.source(self.time_step)
+        self.E_flux_x[self.position_source[0],self.position_source[1]] += self.source(self.time_step)
+        
 
     def boundary_conditions(self):#Will update to allow for switching between different conditions but for now a simple ABC will be used
         self.E_field[0] = self.boundary_low.pop(0)
@@ -73,33 +76,44 @@ class Grid:
         self.boundary_high.append(self.E_field[self.N_x - 2])
 
     def append_to_list(self):
-        self.E_field_list.append(np.copy(self.E_field))
-        self.H_field_list.append(np.copy(self.H_field))   
+        self.E_field_list.append(np.copy(self.E_field_x))
+        self.H_field_list_x.append(np.copy(self.H_field_x))   
+        self.H_field_list_y.append(np.copy(self.H_field_y))   
 
+    def update_E_flux(self):
+        self.E_flux_x[1:self.N_x, 1:self.N_y] += 0.5 * (
+            self.H_field_y[1:self.N_x, 1:self.N_y] - self.H_field_y[:self.N_x-1, 1:self.N_y] -
+            self.H_field_x[1:self.N_x, 1:self.N_y] + self.H_field_x[1:self.N_x, :self.N_y-1]
+        )
+
+        
     def update_E(self):
-        for m in np.arange(1,self.N_x):
-            self.E_field[m] = self.E_field[m]*self.alpha[m] + self.beta[m]*(self.H_field[m-1] - self.H_field[m])
+        self.E_field_x[1:self.N_x, 1:self.N_y] = self.alpha[1:self.N_x, 1:self.N_y] * self.E_flux_x[1:self.N_x, 1:self.N_y]
 
     def update_H(self):
-        for m in np.arange(0,self.N_x-1):
-            self.H_field[m] = self.H_field[m] + self.courant_number*(self.E_field[m] - self.E_field[m+1])
+        self.H_field_x[:-1, :-1] += 0.5 * (
+            self.E_field_x[:-1, :-1] - self.E_field_x[:-1, 1:] 
+        )
+        self.H_field_y[:-1, :-1] += 0.5 * (
+            self.E_field_x[1:, :-1] - self.E_field_x[:-1, :-1]
+        )
+
     
     def define_constants(self):
-        self.loss = self.delta_t*self.conductivity/(2*self.eps_0*self.rel_eps)
-        self.alpha = (1-self.loss)/(1+self.loss)
-        self.beta = self.courant_number/(self.rel_eps*(1+self.loss))
+        self.alpha = 1/(self.rel_eps + (self.conductivity*self.delta_t/self.eps_0))
+        self.beta = self.conductivity*(self.delta_t/self.eps_0)
 
     def add_dieletric(self, pos: tuple=None, eps: np.float16 =1, conductivity: float = 0, mu: np.float16 = 1):
         if pos is not None:#Catch term if pos is not specified 
-            self.rel_eps[pos[0]:pos[1]] = eps
-            self.rel_mu[pos[0]:pos[1]] = mu
-            self.conductivity[pos[0]:pos[1]] = conductivity 
+            self.rel_eps[pos[0][0]:pos[0][1]][pos[1][0]:pos[1][1]] = eps
+            self.rel_mu[pos[0][0]:pos[0][1]][pos[1][0]:pos[1][1]] = mu
+            self.conductivity[pos[0][0]:pos[0][1]][pos[1][0]:pos[1][1]] = conductivity 
         
         #The following exports meta data and values of the dielectric for plotting
         metadata = {"Permitivity": eps, "Conductivity": conductivity, "Position": pos}
         self.dielectric_list.append(metadata)
         df = pd.DataFrame(self.rel_eps)
-        df.to_csv('Data_files/Dielectric.csv', index=False, header=None)
+        df.to_csv('Data_files/Dielectric_2D.csv', index=False, header=None)
         
     @timeit
     def run(self, total_time): 
@@ -107,23 +121,39 @@ class Grid:
         self.boundary_high = [0, 0]
         self.define_constants()
         for self.time_step in np.arange(0,total_time,1):
-            self.update_H()
-            self.update_E()
+            self.update_E_flux()
             self.update_source()
-            self.boundary_conditions()
+            self.update_E()
+            self.update_H()
             
             self.append_to_list()
-            
-        self.output_to_csv()
-
-    @timeit  
-    def output_to_csv(self):#Mainly to allow for plotting the data whithout needing to re-run the simulation
         self.E_field_array = np.array(self.E_field_list)
-        self.H_field_array = np.array(self.H_field_list)
-        np.savetxt('Data_files/E_field.csv', self.E_field_array, delimiter=',')
-        np.savetxt('Data_files/H_field.csv', self.H_field_array, delimiter=',')
-        write_json(self.dielectric_list, 'Meta_data/Dielectric.json', "a")
+        self.output_to_files()
+        self.E_field_array = np.load('Data_files\E_field_array.npy')
+        from matplotlib.animation import FuncAnimation
+        fig,ax = plt.subplots()
+        im = plt.imshow(self.E_field_array[0], animated=True, cmap="plasma")
+        cb = fig.colorbar(im, ax=ax)
+        def updatefig(i):
+            frame = self.E_field_array[i]
+            vmax     = np.max(frame)
+            vmin     = np.min(frame)
+            im.set_array(frame)
+            im.set_clim(vmin, vmax)
+            return im,
         
+        ani = FuncAnimation(fig, updatefig, interval=10, frames= time_max, blit=True)
+        
+        plt.show()
+
+    def save_array(self, array):
+        np.save('Data_files\E_field_array.npy', array)
+    @timeit  
+    def output_to_files(self):
+        write_json(self.dielectric_list, 'Meta_data/Dielectric_2D.json', "a")
+        # Save the entire 3D array using multiprocessing
+        with mp.Pool(processes=mp.cpu_count()) as pool:
+            pool.apply(self.save_array, (self.E_field_array,))
 class Source:
     def __init__(self,
                 freq: np.float64 = 1,
@@ -153,20 +183,19 @@ class Source:
             self.Amplitude_ramped = self.Amplitude*(time_step/self.tau)
         return self.Amplitude_ramped*np.sin(2*np.pi*self.freq*self.delta_t*time_step)
     
-    
 def main():#In this Simulation E is normalised by eliminating the electric and magnetic constant from both E and H
     ##Done so that the amplitudes match
 
-    source = Source(cell_spacing=cellspacing, freq=400e6, tau=200)
-    FDTD = Grid(shape = (201,None), cell_spacing=cellspacing)
+    source = Source(cell_spacing=cellspacing, freq=400e6, tau=1, Amplitude=1)
+    FDTD = Grid(shape = (201,201), cell_spacing=cellspacing)
     FDTD.set_source(source.guassian_40, position = source_position)
-    #FDTD.add_dieletric(pos = (100,150), eps=1.7, conductivity=0.04)
+    FDTD.add_dieletric(pos = ((100,201),(100,201)), eps=1.7, conductivity=0.1)
     FDTD.run(time_max)
 
 if __name__ == "__main__":
-    source_position = 100
+    source_position = (100,100)
     cellspacing = 0.01
-    time_max = 1000
+    time_max = 500
     main()
 #Old code
 """def update_H(self):

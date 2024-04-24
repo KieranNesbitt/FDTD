@@ -40,6 +40,7 @@ class visulise_data:
         plt.show()
 
     def plot_animate(self):
+        #self.array_E = np.abs(np.fft.fft(self.array_E))
         fig, ax = plt.subplots(1)
         ax.set_ylim(np.min(self.array_E)*1.1,np.max(self.array_E)*1.1)
         ax.set_ylabel("$Amplitude$")

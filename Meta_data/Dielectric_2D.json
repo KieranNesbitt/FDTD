@@ -1,0 +1,16 @@
+[
+    {
+        "Permitivity": 1.7,
+        "Conductivity": 0.1,
+        "Position": [
+            [
+                100,
+                201
+            ],
+            [
+                100,
+                201
+            ]
+        ]
+    }
+]
