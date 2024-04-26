@@ -1,15 +1,29 @@
 [
     {
         "Permitivity": 1.7,
-        "Conductivity": 0.1,
+        "Conductivity": 0,
+        "Position": [
+            [
+                50,
+                200
+            ],
+            [
+                50,
+                200
+            ]
+        ]
+    },
+    {
+        "Permitivity": 1.1,
+        "Conductivity": 0,
         "Position": [
             [
                 100,
-                201
+                150
             ],
             [
                 100,
-                201
+                150
             ]
         ]
     }

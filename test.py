@@ -1,23 +1,58 @@
-
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 
-# Generate sample data for x and z arrays
-x = np.random.rand(400)
-z = np.random.rand(1001, 400)
+class Mask:
+    def draw_circle(self,map_: np.ndarray, a:int, b:int, r:int, value: float):
+        """
+        Draw a filled circle onto a 2D array.
 
-# Set up the figure and axis
-fig, ax = plt.subplots()
+        Parameters:
+            map_ (numpy.ndarray): The 2D array representing the map.
+            a (int): x-coordinate of the center of the circle.
+            b (int): y-coordinate of the center of the circle.
+            r (int): Radius of the circle.
 
-# Plot the initial state of z
-line, = ax.plot(z[0])
+        Explanation:
+            - Get the height and width of the map.
+            - Create coordinate grids for x and y.
+            - Calculate the squared distance from each point on the map to the center of the circle using the equation of a circle: (x-a)^2 + (y-b)^2.
+            - Create a mask where True values indicate that the corresponding point is within the circle (i.e., the distance is less than or equal to r^2).
+            - Update the map where the mask is True to fill all cells within the circle.
+        Equation:
+            \(Distnace = (x - a)^2 + (y - b)^2)\)
+        Returns:
+            None (The map is modified in place).
+        """
+        # Get the height and width of the map
+        height, width = map_.shape
 
-def animate(i):
-    line.set_ydata(z[i])  # Update the data for the line
-    return line,
+        # Create coordinate grids for x and y
+        x_coords = np.arange(width)
+        y_coords = np.arange(height)
+        x_grid, y_grid = np.meshgrid(x_coords, y_coords)
 
-# Call the animator, blit=True means only re-draw the parts that have changed.
-ani = animation.FuncAnimation(fig, animate, frames=1001, interval=20, blit=True)
+        # Calculate the squared distance from each point to the center of the circle
+        distances = (x_grid - a)**2 + (y_grid - b)**2
 
+        # Check if the distance is less than or equal to r^2
+        mask = distances <= r**2
+
+        # Update the map where the mask is True
+        map_[mask] = value
+
+    def draw_square(self,map_, center, side_length, value):
+        # Calculate the coordinates of the square's corners
+        top_left = (center[0] - side_length // 2, center[1] - side_length // 2)
+        bottom_right = (center[0] + side_length // 2, center[1] + side_length // 2)
+
+        # Set the values in the map within the square's boundaries to 1
+        map_[top_left[0]:bottom_right[0]+1, top_left[1]:bottom_right[1]+1] = value
+
+# Example usage:
+mask = Mask()
+height, width = 1000, 1000
+map_ = np.zeros((height, width), dtype=np.float32)
+mask.draw_circle(map_, 500, 500, 300, 1)
+mask.draw_square(map_, (500,500), 200, 4)
+plt.imshow(map_)
 plt.show()

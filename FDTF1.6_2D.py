@@ -56,18 +56,20 @@ class Grid:
         self.conductivity = np.zeros((self.N_x, self.N_y), dtype= np.float64)
         self.dielectric_list = []
 
-        with open('Meta_data/Dielectric_2D.json', 'w') as convert_file: 
-            pass
-        
+        open('Meta_data/Dielectric_2D.json', 'w')
+        df = pd.DataFrame(self.rel_eps)
+        df.to_csv('Data_files/Dielectric_2D.csv', index=False, header=None)
+
     def set_source(self, source, position = None, active_time: float = 1): #Set the soruce parameters, using a class function as it allows for variables to set beforehand
         self.source = source
         self.position_source = position
-        metadata = {"Active_time": active_time, "Position": position}
+        Get_atributes = Source()
+        metadata = {"Position": position, "Amplitude": Get_atributes.Amplitude}
         write_json(metadata, 'Meta_data/Source_2D.json', "w")
 
     def update_source(self): #Updates the electric field at self.position for each tick
         self.E_flux_x[self.position_source[0],self.position_source[1]] += self.source(self.time_step)
-        
+        #self.E_flux_x[50:200,100:101] += self.source(self.time_step)
 
     def boundary_conditions(self):#Will update to allow for switching between different conditions but for now a simple ABC will be used
         self.E_field[0] = self.boundary_low.pop(0)
@@ -86,7 +88,6 @@ class Grid:
             self.H_field_x[1:self.N_x, 1:self.N_y] + self.H_field_x[1:self.N_x, :self.N_y-1]
         )
 
-        
     def update_E(self):
         self.E_field_x[1:self.N_x, 1:self.N_y] = self.alpha[1:self.N_x, 1:self.N_y] * self.E_flux_x[1:self.N_x, 1:self.N_y]
 
@@ -103,14 +104,15 @@ class Grid:
         self.alpha = 1/(self.rel_eps + (self.conductivity*self.delta_t/self.eps_0))
         self.beta = self.conductivity*(self.delta_t/self.eps_0)
 
-    def add_dieletric(self, pos: tuple=None, eps: np.float16 =1, conductivity: float = 0, mu: np.float16 = 1):
-        if pos is not None:#Catch term if pos is not specified 
-            self.rel_eps[pos[0][0]:pos[0][1]][pos[1][0]:pos[1][1]] = eps
-            self.rel_mu[pos[0][0]:pos[0][1]][pos[1][0]:pos[1][1]] = mu
-            self.conductivity[pos[0][0]:pos[0][1]][pos[1][0]:pos[1][1]] = conductivity 
+    def add_dieletric(self, posx: tuple=None, posy: tuple=None, eps: np.float16 = 1, conductivity: float = 0, mu: np.float16 = 1):
+        if posx and posy is not None:#Catch term if pos is not specified 
+            self.rel_eps[posx[0]:posx[1], posy[0]:posy[1]] = eps
+            
+            self.rel_mu[posx[0]:posx[1], posy[0]:posy[1]] = mu
+            self.conductivity[posx[0]:posx[1], posy[0]:posy[1]] = conductivity
         
         #The following exports meta data and values of the dielectric for plotting
-        metadata = {"Permitivity": eps, "Conductivity": conductivity, "Position": pos}
+        metadata = {"Permitivity": eps, "Conductivity": conductivity, "Position": (posx,posy)}
         self.dielectric_list.append(metadata)
         df = pd.DataFrame(self.rel_eps)
         df.to_csv('Data_files/Dielectric_2D.csv', index=False, header=None)
@@ -129,22 +131,8 @@ class Grid:
             self.append_to_list()
         self.E_field_array = np.array(self.E_field_list)
         self.output_to_files()
-        self.E_field_array = np.load('Data_files\E_field_array.npy')
-        from matplotlib.animation import FuncAnimation
-        fig,ax = plt.subplots()
-        im = plt.imshow(self.E_field_array[0], animated=True, cmap="plasma")
-        cb = fig.colorbar(im, ax=ax)
-        def updatefig(i):
-            frame = self.E_field_array[i]
-            vmax     = np.max(frame)
-            vmin     = np.min(frame)
-            im.set_array(frame)
-            im.set_clim(vmin, vmax)
-            return im,
         
-        ani = FuncAnimation(fig, updatefig, interval=10, frames= time_max, blit=True)
         
-        plt.show()
 
     def save_array(self, array):
         np.save('Data_files\E_field_array.npy', array)
@@ -152,8 +140,9 @@ class Grid:
     def output_to_files(self):
         write_json(self.dielectric_list, 'Meta_data/Dielectric_2D.json', "a")
         # Save the entire 3D array using multiprocessing
-        with mp.Pool(processes=mp.cpu_count()) as pool:
-            pool.apply(self.save_array, (self.E_field_array,))
+        """with mp.Pool(processes=mp.cpu_count()) as pool:
+            pool.apply(self.save_array, (self.E_field_array,))"""
+        self.save_array(self.E_field_array)
 class Source:
     def __init__(self,
                 freq: np.float64 = 1,
@@ -174,28 +163,37 @@ class Source:
         #self.delta_t = np.sqrt(self.mu_0*self.eps_0)*self.courant_number*self.cell_spacing
 
     def guassian_40(self,time_step): 
-        t0 =40
-        spread = 12
+        t0 =120
+        spread = 40
         return self.Amplitude*np.exp(-0.5*((t0- time_step)/spread)**2)
-
-    def sinusodial(self, time_step):
+    
+    def Sinusodial(self, time_step):
         if time_step <= self.tau:
-            self.Amplitude_ramped = self.Amplitude*(time_step/self.tau)
-        return self.Amplitude_ramped*np.sin(2*np.pi*self.freq*self.delta_t*time_step)
+            self.Amplitude_ramped = self.ramp_up(time_step)
+        return self.Amplitude_ramped*np.sin(2*np.pi*(self.freq)*self.delta_t*time_step)
+    
+    def ramp_up(self,time_step):
+        return self.Amplitude*(time_step/self.tau)
+    
+    def ramp_down(self, time_step):
+        return self.Amplitude*(1-time_step/self.tau)
     
 def main():#In this Simulation E is normalised by eliminating the electric and magnetic constant from both E and H
     ##Done so that the amplitudes match
 
-    source = Source(cell_spacing=cellspacing, freq=400e6, tau=1, Amplitude=1)
-    FDTD = Grid(shape = (201,201), cell_spacing=cellspacing)
-    FDTD.set_source(source.guassian_40, position = source_position)
-    FDTD.add_dieletric(pos = ((100,201),(100,201)), eps=1.7, conductivity=0.1)
+    source = Source(cell_spacing=cellspacing, freq=800e6, tau=50, Amplitude=1)
+    FDTD = Grid(shape = (Grid_Size), cell_spacing=cellspacing)
+    FDTD.set_source(source.Sinusodial, position = source_position)
+    FDTD.add_dieletric(posx = (50,200),posy = (50,200), eps=1.7)
+    FDTD.add_dieletric(posx=(100,150), posy=(100,150), eps=1.1)
+
     FDTD.run(time_max)
 
 if __name__ == "__main__":
-    source_position = (100,100)
+    Grid_Size = (251,251)
+    source_position = (125,125)
     cellspacing = 0.01
-    time_max = 500
+    time_max = 1000
     main()
 #Old code
 """def update_H(self):

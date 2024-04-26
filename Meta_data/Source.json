@@ -1,7 +1,4 @@
 {
-    "Active_time": 1,
-    "Position": [
-        100,
-        100
-    ]
+    "Position": 1,
+    "Type": "Guassian_40"
 }
