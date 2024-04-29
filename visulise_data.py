@@ -90,7 +90,7 @@ class visulise_data:
         fig,ax = plt.subplots()
         
         im1 = plt.imshow(self.Dielectric_array,animated=True, alpha=0.5, cmap = "Blues")
-        im = plt.imshow(self.E_field_array[400], animated=True, cmap="Reds")
+        im = plt.imshow(self.E_field_array[500], animated=True, cmap="Reds")
         ax.minorticks_on()
         cb = fig.colorbar(im, ax=ax)
         cb2 = fig.colorbar(im1, ax = ax)
@@ -98,13 +98,13 @@ class visulise_data:
         ax.set_xlabel("$X$")
         ax.set_ylabel("$Y$")
         cb.ax.set_title("$|\overrightarrow{E_x}(x,y)|$")
-        title = ax.text(0.5,0.90, "", bbox={'facecolor':'w', 'alpha':0.5, 'pad':5},
+        title = ax.text(0.5,0.95, "", bbox={'facecolor':'w', 'alpha':0.5, 'pad':5},
                 transform=ax.transAxes, ha="center")
         def updatefig(i):
             im.set_array(self.E_field_array[i])
             title.set_text(f"Time step: {i}")
             return im,title,im1,
-        ani = FuncAnimation(fig, updatefig, interval=1, frames= 500, blit=True)
+        ani = FuncAnimation(fig, updatefig, interval=0, frames= 1000, blit=True)
         if save_animation != False:
             writer=PillowWriter(fps=30,
                                  metadata=dict(artist='Me'),
@@ -116,13 +116,13 @@ class visulise_data:
         import matplotlib
         matplotlib.use('Qt5Agg')
 
-        self.E_field_array = np.load('Data_files\E_field_array.npy')
+        self.E_field_array = np.abs(np.load('Data_files\E_field_array.npy'))
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         x = np.arange(0, np.shape(self.E_field_array[0])[0])
         y = np.arange(0, np.shape(self.E_field_array[0])[1])
         x,y = np.meshgrid(x,y)
-        plot = ax.plot_surface(x,y, self.E_field_array[frame], cmap = "Reds",rstride=3,cstride=3, linewidth=1, antialiased=True)
+        plot = ax.plot_surface(x,y, self.E_field_array[frame], cmap = "viridis",rstride=5,cstride=5, linewidth=1)
         ax.set_xlabel("$X$")
         ax.set_ylabel("$Y$")
         cb = fig.colorbar(plot)

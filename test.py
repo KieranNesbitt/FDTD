@@ -19,7 +19,7 @@ class Mask:
             - Create a mask where True values indicate that the corresponding point is within the circle (i.e., the distance is less than or equal to r^2).
             - Update the map where the mask is True to fill all cells within the circle.
         Equation:
-            \(Distnace = (x - a)^2 + (y - b)^2)\)
+            \(Distance = (x - a)^2 + (y - b)^2)\)
         Returns:
             None (The map is modified in place).
         """
