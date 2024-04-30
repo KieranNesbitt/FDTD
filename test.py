@@ -48,11 +48,12 @@ class Mask:
         # Set the values in the map within the square's boundaries to 1
         map_[top_left[0]:bottom_right[0]+1, top_left[1]:bottom_right[1]+1] = value
 
+
 # Example usage:
-mask = Mask()
+import Dielectric_Mask as Draw
+mask = Draw.Ellipsoid(500,500,250,50)
 height, width = 1000, 1000
 map_ = np.zeros((height, width), dtype=np.float32)
-mask.draw_circle(map_, 500, 500, 300, 1)
-mask.draw_square(map_, (500,500), 200, 4)
+mask.create(map_, 1.7)
 plt.imshow(map_)
 plt.show()

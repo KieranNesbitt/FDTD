@@ -37,7 +37,8 @@ class Grid:
         self.eps_0 = 8.85418782e-12
         self.cell_spacing = cell_spacing
         self.courant_number = courant_number
-        self.delta_t: np.float32 = np.sqrt(self.mu_0*self.eps_0)*self.courant_number*self.cell_spacing
+        self.delta_t: np.float32 = self.cell_spacing/6e8
+        
         self.N_x,self.N_y = shape
         #Field arrays
         ## Will be used to store the calc fields
@@ -45,6 +46,7 @@ class Grid:
         self.H_field_y = np.zeros((self.N_x, self.N_y), dtype=np.float32)
         self.E_field_x = np.zeros((self.N_x, self.N_y), dtype=np.float32)
         self.E_flux_x = np.zeros((self.N_x, self.N_y), dtype=np.float32)
+
         #Lists will be appened at each time step
         self.E_field_list =[]
         self.H_field_list_x =[]
@@ -60,22 +62,15 @@ class Grid:
         df = pd.DataFrame(self.rel_eps)
         df.to_csv('Data_files/Dielectric_2D.csv', index=False, header=None)
 
-    def set_source(self, source, position = None): #Set the source parameters, using a class function as it allows for variables to set beforehand
+    def set_source(self, source, position: tuple, Amplitude): #Set the source parameters, using a class function as it allows for variables to set beforehand
         self.source = source
         self.position_source = position
-        Get_atributes = Source()
-        metadata = {"Position": position, "Amplitude": Get_atributes.Amplitude}
+        metadata = {"Position": position, "Amplitude": Amplitude}
         write_json(metadata, 'Meta_data/Source_2D.json', "w")
 
     def update_source(self): #Updates the electric field at self.position for each tick
-        self.E_flux_x[self.position_source[0],self.position_source[1]] += self.source(self.time_step)
-        #self.E_flux_x[50:200,100:101] += self.source(self.time_step)
-
-    def boundary_conditions(self):#Will update to allow for switching between different conditions but for now a simple ABC will be used
-        self.E_field[0] = self.boundary_low.pop(0)
-        self.boundary_low.append(self.E_field[1])
-        self.E_field[self.N_x-1] = self.boundary_high.pop(0)
-        self.boundary_high.append(self.E_field[self.N_x - 2])
+        self.E_flux_x[self.position_source[0][0]:self.position_source[0][1],self.position_source[1][0]:self.position_source[1][1]] += self.source(self.time_step)
+        #self.E_flux_x[1,250] += self.source(self.time_step)
 
     def append_to_list(self):
         self.E_field_list.append(np.copy(self.E_field_x))
@@ -92,10 +87,10 @@ class Grid:
         self.E_field_x[1:self.N_x, 1:self.N_y] = self.alpha[1:self.N_x, 1:self.N_y] * self.E_flux_x[1:self.N_x, 1:self.N_y]
 
     def update_H(self):
-        self.H_field_x[:-1, :-1] += 0.5 * (
+        self.H_field_x[:-1, :-1] += 0.5 *self.rel_mu[:-1, :-1]* (
             self.E_field_x[:-1, :-1] - self.E_field_x[:-1, 1:] 
         )
-        self.H_field_y[:-1, :-1] += 0.5 * (
+        self.H_field_y[:-1, :-1] += 0.5 **self.rel_mu[:-1, :-1]* (
             self.E_field_x[1:, :-1] - self.E_field_x[:-1, :-1]
         )
 
@@ -108,10 +103,7 @@ class Grid:
         mask_Type.create(self.rel_eps, eps)
         mask_Type.create(self.rel_mu, mu)
         mask_Type.create(self.conductivity, conductivity)
-        """self.rel_eps[posx[0]:posx[1], posy[0]:posy[1]] = eps
-        self.rel_mu[posx[0]:posx[1], posy[0]:posy[1]] = mu
-        self.conductivity[posx[0]:posx[1], posy[0]:posy[1]] = conductivity"""
-        
+
         #The following exports meta data and values of the dielectric for plotting
         metadata = {"Permitivity": eps, "Conductivity": conductivity}
         self.dielectric_list.append(metadata)
@@ -132,14 +124,14 @@ class Grid:
             self.append_to_list()
         self.E_field_array = np.array(self.E_field_list)
         self.output_to_files()
+
     def save_array(self, array):
         np.save('Data_files\E_field_array.npy', array)
+
     @timeit  
     def output_to_files(self):
         write_json(self.dielectric_list, 'Meta_data/Dielectric_2D.json', "a")
-        # Save the entire 3D array using multiprocessing
-        """with mp.Pool(processes=mp.cpu_count()) as pool:
-            pool.apply(self.save_array, (self.E_field_array,))"""
+        # Save the entire 3D array
         self.save_array(self.E_field_array)
         
 class Source:
@@ -148,8 +140,10 @@ class Source:
                 cell_spacing: np.float32 = 1,
                 courant_number: np.float32 = 0.5,
                 Amplitude: np.float32 = 1,
-                tau: np.float32 = 1
+                tau: np.float32 = 1,
+                Position: tuple= None, 
                  ):
+        self.Position = Position
         self.mu_0 = 1.25663706e-6
         self.eps_0 = 8.85418782e-12
         self.freq = freq
@@ -179,23 +173,25 @@ class Source:
     
     def ramp_down(self, time_step):
         return self.Amplitude*(1-time_step/self.tau[1])
-    
-    
+        
 def main():#In this Simulation E is normalised by eliminating the electric and magnetic constant from both E and H
     ##Done so that the amplitudes match
     import Dielectric_Mask as Mask
-    source = Source(cell_spacing=cellspacing, freq=400e6, tau=(50,100), Amplitude=1)
+    source = Source(cell_spacing=cellspacing, freq=400e6, tau=(1,1), Amplitude=Amplitude, Position=source_position)
     FDTD = Grid(shape = (Grid_Size), cell_spacing=cellspacing)
-    FDTD.set_source(source.guassian_40, position = source_position)
-    FDTD.add_dieletric(Mask.Ellipsoid(250,250, 250, 50), (4,4,0))
+    FDTD.set_source(source.Sinusodial, position = source_position, Amplitude=Amplitude)
+    FDTD.add_dieletric(Mask.Square((250,250), 10), (1.5,1.5,0))
+    #FDTD.add_dieletric(Mask.Ellipsoid(a=100,b=250, r_x=50, r_y=25), Values=(2,2,0))
     FDTD.run(time_max)
 
 if __name__ == "__main__":
-    Grid_Size = (500,500)
-    source_position = (100,250)
+    Grid_Size = (501,501)
+    source_position = ((250,251),(250,251))
     cellspacing = 0.01
-    time_max = 1000
+    time_max = 1500
+    Amplitude = 10
     main()
+
 #Old code
 """def update_H(self):
         delta_E: np.float32 = self.E_field[1:] - self.E_field[:-1]

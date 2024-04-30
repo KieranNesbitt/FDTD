@@ -160,11 +160,11 @@ def main():#In this Simulation E is normalised by eliminating the electric and m
     source = Source(cell_spacing=cellspacing, freq=400e6, tau=200)
     FDTD = Grid(shape = (201,None), cell_spacing=cellspacing)
     FDTD.set_source(source.guassian_40, position = source_position)
-    #FDTD.add_dieletric(pos = (100,150), eps=1.7, conductivity=0.04)
+    FDTD.add_dieletric(pos = (100,150), eps=1.7, conductivity=0)
     FDTD.run(time_max)
 
 if __name__ == "__main__":
-    source_position = 100
+    source_position = 5
     cellspacing = 0.01
     time_max = 1000
     main()

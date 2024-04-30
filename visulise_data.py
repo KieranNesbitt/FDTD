@@ -1,4 +1,6 @@
 import numpy as np
+import matplotlib
+matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.animation import FuncAnimation, PillowWriter
@@ -82,15 +84,15 @@ class visulise_data:
         plt.show()
     
     def plot_2D_animate_imshow(self, save_animation: bool = False):
-        import matplotlib
-        matplotlib.use('Qt5Agg')
+
         self.E_field_array = np.abs(np.load('Data_files\E_field_array.npy'))
         self.Dielectric_array = np.loadtxt(open("Data_files\Dielectric_2D.csv", "rb"), delimiter=",", skiprows=1)
-        
+
         fig,ax = plt.subplots()
         
-        im1 = plt.imshow(self.Dielectric_array,animated=True, alpha=0.5, cmap = "Blues")
-        im = plt.imshow(self.E_field_array[500], animated=True, cmap="Reds")
+        im1 = plt.imshow(self.Dielectric_array,animated=True, alpha=0.5, cmap = "GnBu")
+        im1.set_clim(1)
+        im = plt.imshow(self.E_field_array[0], animated=True, cmap="Reds")
         ax.minorticks_on()
         cb = fig.colorbar(im, ax=ax)
         cb2 = fig.colorbar(im1, ax = ax)
@@ -100,11 +102,13 @@ class visulise_data:
         cb.ax.set_title("$|\overrightarrow{E_x}(x,y)|$")
         title = ax.text(0.5,0.95, "", bbox={'facecolor':'w', 'alpha':0.5, 'pad':5},
                 transform=ax.transAxes, ha="center")
+        im.set_clim(np.min(self.E_field_array), np.max(self.E_field_array[1]))
         def updatefig(i):
             im.set_array(self.E_field_array[i])
+            
             title.set_text(f"Time step: {i}")
             return im,title,im1,
-        ani = FuncAnimation(fig, updatefig, interval=0, frames= 1000, blit=True)
+        ani = FuncAnimation(fig, updatefig, interval=0, frames= 1500, blit=True)
         if save_animation != False:
             writer=PillowWriter(fps=30,
                                  metadata=dict(artist='Me'),
@@ -113,21 +117,19 @@ class visulise_data:
         plt.show()
     
     def plot_2D_surface(self, frame):
-        import matplotlib
-        matplotlib.use('Qt5Agg')
-
-        self.E_field_array = np.abs(np.load('Data_files\E_field_array.npy'))
+        self.E_field_array = np.load('Data_files\E_field_array.npy')
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        x = np.arange(0, np.shape(self.E_field_array[0])[0])
-        y = np.arange(0, np.shape(self.E_field_array[0])[1])
+        x = np.arange(0, np.shape(self.E_field_array[0])[1])
+        y = np.arange(0, np.shape(self.E_field_array[0])[0])
         x,y = np.meshgrid(x,y)
         plot = ax.plot_surface(x,y, self.E_field_array[frame], cmap = "viridis",rstride=5,cstride=5, linewidth=1)
         ax.set_xlabel("$X$")
         ax.set_ylabel("$Y$")
         cb = fig.colorbar(plot)
-        cb.ax.set_title("$|\overrightarrow{E_x}(x,y)|$")
-        plt.show()
+        cb.ax.set_title("$\overrightarrow{E_x}(x,y)$")
 
 Results = visulise_data()
 Results.plot_2D_animate_imshow()
+#Results.plot_2D_surface(450)
+plt.show()

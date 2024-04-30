@@ -87,7 +87,7 @@ class Ellipsoid:
         distances = ((x_grid - self.a) / self.r_x)**2 + ((y_grid - self.b) / self.r_y)**2
 
         # Check if the distance is less than or equal to 1 (for points inside the ellipsoid)
-        mask = distances <= 1
+        mask = distances < 1
 
         # Update the map where the mask is True
         map_[mask] = value
