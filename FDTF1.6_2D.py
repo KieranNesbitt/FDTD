@@ -3,9 +3,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from functools import wraps
 import time
-import scipy.signal as signal
-import multiprocessing as mp
+import os
+from alive_progress import alive_bar
 import json
+
 
 def timeit(func):
     @wraps(func)
@@ -58,19 +59,20 @@ class Grid:
         self.conductivity = np.zeros((self.N_x, self.N_y), dtype= np.float32)
         self.dielectric_list = []
 
-        open('Meta_data/Dielectric_2D.json', 'w')
-        df = pd.DataFrame(self.rel_eps)
-        df.to_csv('Data_files/Dielectric_2D.csv', index=False, header=None)
+        open('Meta_data\Dielectric_2D.json', 'w')
+        meta_data = {"Cell_spacing": self.cell_spacing, "Time_Delta": self.delta_t, "Dimensions": Dimensions, "Shape": (self.N_x, self.N_y)}
+        write_json(meta_data, f"{os.getcwd()}\Meta_data/Grid.json", "w")
+        write_csv(self.rel_eps, f"{os.getcwd()}\Data_files\Dielectric.csv")
 
     def set_source(self, source, position: tuple, Amplitude): #Set the source parameters, using a class function as it allows for variables to set beforehand
         self.source = source
         self.position_source = position
         metadata = {"Position": position, "Amplitude": Amplitude}
-        write_json(metadata, 'Meta_data/Source_2D.json', "w")
+        write_json(metadata, f"{os.getcwd()}\Meta_data\Source_2D.json", "w")
 
     def update_source(self): #Updates the electric field at self.position for each tick
         self.E_flux_x[self.position_source[0][0]:self.position_source[0][1],self.position_source[1][0]:self.position_source[1][1]] += self.source(self.time_step)
-        #self.E_flux_x[1,250] += self.source(self.time_step)
+        #self.E_flux_x[250,250] += self.source(self.time_step)
 
     def append_to_list(self):
         self.E_field_list.append(np.copy(self.E_field_x))
@@ -108,29 +110,32 @@ class Grid:
         metadata = {"Permitivity": eps, "Conductivity": conductivity}
         self.dielectric_list.append(metadata)
         df = pd.DataFrame(self.rel_eps)
-        df.to_csv('Data_files/Dielectric_2D.csv', index=False, header=None)
+        df.to_csv(f"{os.getcwd()}\Data_files\Dielectric_2D.csv", index=False, header=None)
         
     @timeit
     def run(self, total_time):
         self.boundary_low = [0, 0]
         self.boundary_high = [0, 0]
         self.define_constants()
-        for self.time_step in np.arange(0,total_time,1):
-            self.update_E_flux()
-            self.update_source()
-            self.update_E()
-            self.update_H()
-            
-            self.append_to_list()
+        
+        with alive_bar(total_time, bar = "filling", spinner = "waves") as bar:
+            for self.time_step in np.arange(0,total_time,1):
+                self.update_E_flux()
+                self.update_source()
+                self.update_E()
+                self.update_H()
+                
+                self.append_to_list()
+                bar()
         self.E_field_array = np.array(self.E_field_list)
+            
         self.output_to_files()
-
     def save_array(self, array):
-        np.save('Data_files\E_field_array.npy', array)
+        np.save(f"{os.getcwd()}\Data_files\E_field_array.npy", array)
 
     @timeit  
     def output_to_files(self):
-        write_json(self.dielectric_list, 'Meta_data/Dielectric_2D.json', "a")
+        write_json(self.dielectric_list, f"{os.getcwd()}\Meta_data\Dielectric_2D.json", "a")
         # Save the entire 3D array
         self.save_array(self.E_field_array)
         
@@ -157,8 +162,8 @@ class Source:
     def plane_wave(self, time_step):
         return 
     def guassian_40(self,time_step): 
-        t0 =40
-        spread = 12
+        t0 =100
+        spread = 30
         return self.Amplitude*np.exp(-0.5*((t0- time_step)/spread)**2)
     
     def Sinusodial(self, time_step):
@@ -177,17 +182,19 @@ class Source:
 def main():#In this Simulation E is normalised by eliminating the electric and magnetic constant from both E and H
     ##Done so that the amplitudes match
     import Dielectric_Mask as Mask
-    source = Source(cell_spacing=cellspacing, freq=400e6, tau=(1,1), Amplitude=Amplitude, Position=source_position)
+    source = Source(cell_spacing=cellspacing, freq=freq_in, tau=(100,1), Amplitude=Amplitude, Position=source_position)
     FDTD = Grid(shape = (Grid_Size), cell_spacing=cellspacing)
     FDTD.set_source(source.Sinusodial, position = source_position, Amplitude=Amplitude)
-    FDTD.add_dieletric(Mask.Square((250,250), 10), (1.5,1.5,0))
-    #FDTD.add_dieletric(Mask.Ellipsoid(a=100,b=250, r_x=50, r_y=25), Values=(2,2,0))
+    #FDTD.add_dieletric(Mask.Square((250,250), 10), (1.5,1.5,0))
+    FDTD.add_dieletric(Mask.Ellipsoid(a=100,b=100, r_x=50, r_y=10), Values=(2,2,0))
     FDTD.run(time_max)
 
 if __name__ == "__main__":
-    Grid_Size = (501,501)
-    source_position = ((250,251),(250,251))
-    cellspacing = 0.01
+    Grid_Size = (201,201)
+    freq_in = 400e9
+    wavelength = 3e8/freq_in
+    source_position = ((100,101),(100,101))
+    cellspacing = wavelength/50 #Cellspacing is determined by the number of cells per wavelength, Standard is 50 ##Looks the best 
     time_max = 1500
     Amplitude = 10
     main()

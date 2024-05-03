@@ -31,10 +31,4 @@ plano_convex_lens = PlanoConvexLens(a, b, r, thickness)
 # Draw the plano-convex lens shape on the map
 plano_convex_lens.create(map_, value=1)
 
-# Display the map with the plano-convex lens shape
-plt.imshow(map_, cmap='gray', origin='lower')
-plt.title('Plano-Convex Lens Shape')
-plt.xlabel('X-coordinate')
-plt.ylabel('Y-coordinate')
-plt.colorbar(label='Intensity')
-plt.show()
+print(np.arange(0,501*1.5e-05, 1.5e-05).shape)
