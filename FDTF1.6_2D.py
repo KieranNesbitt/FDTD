@@ -59,7 +59,7 @@ class Grid:
         self.conductivity = np.zeros((self.N_x, self.N_y), dtype= np.float32)
         self.dielectric_list = []
 
-        open('Meta_data\Dielectric_2D.json', 'w')
+        open(f"{os.getcwd()}\Meta_data\Dielectric.json", 'w')
         meta_data = {"Cell_spacing": self.cell_spacing, "Time_Delta": self.delta_t, "Dimensions": Dimensions, "Shape": (self.N_x, self.N_y)}
         write_json(meta_data, f"{os.getcwd()}\Meta_data/Grid.json", "w")
         write_csv(self.rel_eps, f"{os.getcwd()}\Data_files\Dielectric.csv")
