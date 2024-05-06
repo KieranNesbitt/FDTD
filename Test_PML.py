@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-N_x, N_y = (10,10)
-PML_thickness = 5
+N_x, N_y = (200,200)
+PML_thickness = 50
 Grid = np.zeros((N_x,N_y))
 def add_outer_layer(array, value, thickness):
     # Get the shape of the original array
@@ -21,9 +21,21 @@ def add_outer_layer(array, value, thickness):
 
 #Grid_PML = add_outer_layer(Grid, value=1, thickness=2)
 
-Grid_PML = np.pad(Grid, 5, mode="linear_ramp", end_values=(PML_thickness,PML_thickness))
+Grid_PML = np.pad(Grid, PML_thickness, mode="linear_ramp", end_values=(PML_thickness,PML_thickness))
+Grid_PML_xn = 0.333*(Grid_PML/PML_thickness)**3
 
-plt.figure(2)
-plt.imshow(Grid_PML, cmap="Blues")
+PML_1 = Grid_PML_xn
+PML_2 =(1)/(1+Grid_PML_xn)
+PML_3 = (1-Grid_PML_xn)/(1+Grid_PML_xn)
+
+plt.figure()
+plt.imshow(PML_1, cmap="Blues")
+plt.colorbar()
+plt.figure()
+plt.imshow(PML_2, cmap= "Reds")
+plt.colorbar()
+plt.figure()
+plt.imshow(PML_3, cmap="Greens")
+plt.colorbar()
 plt.show()
 
