@@ -187,7 +187,7 @@ def main():#In this Simulation E is normalised by eliminating the electric and m
     FDTD = Grid(shape = (Grid_Size), cell_spacing=cellspacing)
     FDTD.set_source(source.Sinusodial, position = source_position, Amplitude=Amplitude)
     #FDTD.add_dieletric(Mask.Square((250,250), 10), (1.5,1.5,0))
-    FDTD.add_dieletric(Mask.Ellipsoid(a=100,b=100, r_x=50, r_y=10), Values=(2,2,0))
+    #FDTD.add_dieletric(Mask.Ellipsoid(a=100,b=100, r_x=50, r_y=10), Values=(2,2,0))
     FDTD.run(time_max)
 
 if __name__ == "__main__":

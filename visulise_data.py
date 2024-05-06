@@ -7,10 +7,10 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 import os
 import json
 
-class visulise_data:
+class visulise_data_1D:
     def __init__(self):
-        df_E = pd.read_csv(f"{os.getcwd()}\Data_files/E_field.csv", header=None)
-        df_H = pd.read_csv(f"{os.getcwd()}\Data_files/H_field.csv", header = None)
+        df_E = pd.read_csv(f"{os.getcwd()}\Data_files\E_field.csv", header=None)
+        df_H = pd.read_csv(f"{os.getcwd()}\Data_files\H_field.csv", header = None)
         plt.style.use("seaborn-v0_8")
         self.df_Dielectric = pd.read_csv(f"{os.getcwd()}\Data_files/Dielectric.csv", header=None)
         self.array_E = df_E.values[:, :-1].astype(float)
@@ -70,23 +70,7 @@ class visulise_data:
         ani.save('EM_water.gif', writer=writer)"""
         plt.show()
     
-    def plot_intensity(self, frame):
-        fig, axs = plt.subplots(2)
-
-        fig.suptitle('EM Pulse')
-        axs[0].plot(np.abs(self.array_E[frame])**2)
-        axs[0].plot((0.5/self.df_Dielectric-1)/3, 'k--', linewidth=0.75)
-        axs[0].text(170, 0.5, '$\epsilon_r$ = {}'.format(4),
-        horizontalalignment='center')
-        axs[0].set_ylabel("$E_x$")
-        axs[1].plot(np.abs(self.array_H[frame])**2)
-        axs[1].set_ylabel("$H_y$")
-        axs[2].set_xlabel("Spatial Index along $z$-axis")
-        axs[1].plot((0.5/self.df_Dielectric-1)/3, 'k--', linewidth=0.75)
-        axs[1].text(170, 0.5, '$\epsilon_r$ = {}'.format(4),
-        horizontalalignment='center')
-        plt.show()
-    
+class visulise_data_2D:
     def plot_2D_animate_imshow(self, save_animation: bool = False):
         
         self.E_field_array = np.abs(np.load(f'{os.getcwd()}\Data_files\E_field_array.npy'))
@@ -133,8 +117,10 @@ class visulise_data:
         cb = fig.colorbar(plot)
         cb.ax.set_title("$\overrightarrow{E_x}(x,y)$")
         #plt.show()
+def main():
+    Results = visulise_data_2D()
+    Results.plot_2D_animate_imshow()
+    plt.show()
 
-Results = visulise_data()
-Results.plot_2D_animate_imshow()
-#Results.plot_2D_surface(100)
-plt.show()
+if __name__ == "__main__":
+    main()
