@@ -6,7 +6,8 @@ import time
 import os
 from alive_progress import alive_bar
 import json
-
+Path = os.getcwd()
+print(Path)
 
 def timeit(func):
     @wraps(func)
