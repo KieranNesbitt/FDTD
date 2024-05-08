@@ -1,6 +1,6 @@
 {
-    "Cell_spacing": 1.5e-05,
-    "Time_Delta": 2.5e-14,
+    "Cell_spacing": 1.8750000000000002e-05,
+    "Time_Delta": 3.1250000000000006e-14,
     "Dimensions": 2,
     "Shape": [
         201,

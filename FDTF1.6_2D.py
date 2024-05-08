@@ -7,7 +7,6 @@ import os
 from alive_progress import alive_bar
 import json
 Path = os.getcwd()
-print(Path)
 
 def timeit(func):
     @wraps(func)
@@ -47,7 +46,10 @@ class Grid:
         self.H_field_x = np.zeros((self.N_x, self.N_y), dtype=np.float32)
         self.H_field_y = np.zeros((self.N_x, self.N_y), dtype=np.float32)
         self.E_field_x = np.zeros((self.N_x, self.N_y), dtype=np.float32)
+        self.E_field_y = np.zeros((self.N_x, self.N_y), dtype=np.float32)
         self.E_flux_x = np.zeros((self.N_x, self.N_y), dtype=np.float32)
+        self.E_flux_y = np.zeros((self.N_x, self.N_y), dtype=np.float32)
+        self.I_x = np.zeros((self.N_x, self.N_y), dtype=np.float32)
 
         #Lists will be appened at each time step
         self.E_field_list =[]
@@ -60,16 +62,16 @@ class Grid:
         self.conductivity = np.zeros((self.N_x, self.N_y), dtype= np.float32)
         self.dielectric_list = []
 
-        open(f'{os.getcwd()}\Meta_data\Dielectric_2D.json', 'w')
+        open(f'{Path}\Meta_data\Dielectric_2D.json', 'w')
         meta_data = {"Cell_spacing": self.cell_spacing, "Time_Delta": self.delta_t, "Dimensions": Dimensions, "Shape": (self.N_x, self.N_y)}
-        write_json(meta_data, f"{os.getcwd()}\Meta_data/Grid.json", "w")
-        write_csv(self.rel_eps, f"{os.getcwd()}\Data_files\Dielectric.csv")
+        write_json(meta_data, f"{Path}\Meta_data/Grid.json", "w")
+        write_csv(self.rel_eps, f"{Path}\Data_files\Dielectric_2D.csv")
 
     def set_source(self, source, position: tuple, Amplitude): #Set the source parameters, using a class function as it allows for variables to set beforehand
         self.source = source
         self.position_source = position
         metadata = {"Position": position, "Amplitude": Amplitude}
-        write_json(metadata, f"{os.getcwd()}\Meta_data\Source_2D.json", "w")
+        write_json(metadata, f"{Path}\Meta_data\Source_2D.json", "w")
 
     def update_source(self): #Updates the electric field at self.position for each tick
         self.E_flux_x[self.position_source[0][0]:self.position_source[0][1],self.position_source[1][0]:self.position_source[1][1]] += self.source(self.time_step)
@@ -80,19 +82,21 @@ class Grid:
         self.H_field_list_x.append(np.copy(self.H_field_x))   
         self.H_field_list_y.append(np.copy(self.H_field_y))   
 
-    def update_E_flux(self):
+    def update_E_flux_x(self):
         self.E_flux_x[1:self.N_x, 1:self.N_y] += 0.5 * (
             self.H_field_y[1:self.N_x, 1:self.N_y] - self.H_field_y[:self.N_x-1, 1:self.N_y] -
             self.H_field_x[1:self.N_x, 1:self.N_y] + self.H_field_x[1:self.N_x, :self.N_y-1]
         )
-
-    def update_E(self):
-        self.E_field_x[1:self.N_x, 1:self.N_y] = self.alpha[1:self.N_x, 1:self.N_y] * self.E_flux_x[1:self.N_x, 1:self.N_y]
-
-    def update_H(self):
+        
+    def update_E_x(self):
+        self.E_field_x[1:self.N_x, 1:self.N_y] = self.alpha[1:self.N_x, 1:self.N_y] * (self.E_flux_x[1:self.N_x, 1:self.N_y]- self.I_x[1:self.N_x, 1:self.N_y])
+        self.I_x[1:self.N_x, 1:self.N_y] = self.I_x[1:self.N_x, 1:self.N_y] + self.beta[1:self.N_x, 1:self.N_y]*self.E_field_x[1:self.N_x, 1:self.N_y]
+    def update_H_x(self):
         self.H_field_x[:-1, :-1] += 0.5 *self.rel_mu[:-1, :-1]* (
             self.E_field_x[:-1, :-1] - self.E_field_x[:-1, 1:] 
         )
+
+    def update_H_y(self):
         self.H_field_y[:-1, :-1] += 0.5 **self.rel_mu[:-1, :-1]* (
             self.E_field_x[1:, :-1] - self.E_field_x[:-1, :-1]
         )
@@ -111,7 +115,7 @@ class Grid:
         metadata = {"Permitivity": eps, "Conductivity": conductivity}
         self.dielectric_list.append(metadata)
         df = pd.DataFrame(self.rel_eps)
-        df.to_csv(f"{os.getcwd()}\Data_files\Dielectric_2D.csv", index=False, header=None)
+        df.to_csv(f"{Path}\Data_files\Dielectric_2D.csv", index=False, header=None)
         
     @timeit
     def run(self, total_time):
@@ -121,10 +125,11 @@ class Grid:
         
         with alive_bar(total_time, bar = "filling", spinner = "waves") as bar:
             for self.time_step in np.arange(0,total_time,1):
-                self.update_E_flux()
+                self.update_E_flux_x()
                 self.update_source()
-                self.update_E()
-                self.update_H()
+                self.update_E_x()
+                self.update_H_x()
+                self.update_H_y()
                 
                 self.append_to_list()
                 bar()
@@ -132,11 +137,11 @@ class Grid:
             
         self.output_to_files()
     def save_array(self, array):
-        np.save(f"{os.getcwd()}\Data_files\E_field_array.npy", array)
+        np.save(f"{Path}\Data_files\E_field_array.npy", array)
 
     @timeit  
     def output_to_files(self):
-        write_json(self.dielectric_list, f"{os.getcwd()}\Meta_data\Dielectric_2D.json", "a")
+        write_json(self.dielectric_list, f"{Path}\Meta_data\Dielectric_2D.json", "a")
         # Save the entire 3D array
         self.save_array(self.E_field_array)
         
@@ -186,25 +191,14 @@ def main():#In this Simulation E is normalised by eliminating the electric and m
     source = Source(cell_spacing=cellspacing, freq=freq_in, tau=(100,1), Amplitude=Amplitude, Position=source_position)
     FDTD = Grid(shape = (Grid_Size), cell_spacing=cellspacing)
     FDTD.set_source(source.Sinusodial, position = source_position, Amplitude=Amplitude)
-    #FDTD.add_dieletric(Mask.Square((250,250), 10), (1.5,1.5,0))
-    #FDTD.add_dieletric(Mask.Ellipsoid(a=100,b=100, r_x=50, r_y=10), Values=(2,2,0))
     FDTD.run(time_max)
 
 if __name__ == "__main__":
-    Grid_Size = (201,201)
+    Grid_Size = (201,201) # Reminder that this is (Rows, Columns)
     freq_in = 400e9
-    wavelength = 3e8/freq_in
+    wavelength = 3e8/freq_in #Used for determing cell spacing
     source_position = ((100,101),(100,101))
-    cellspacing = wavelength/50 #Cellspacing is determined by the number of cells per wavelength, Standard is 50 ##Looks the best 
-    time_max = 1500
-    Amplitude = 10
+    cellspacing = wavelength/40 #Cellspacing is determined by the number of cells per wavelength, Standard for this sim is 0 ##Looks the best 
+    time_max: int = 1500 #Max time step taken
+    Amplitude: int = 10
     main()
-
-#Old code
-"""def update_H(self):
-        delta_E: np.float32 = self.E_field[1:] - self.E_field[:-1]
-        self.H_field[:-1] += self.gamma[:-1] * delta_E
-
-    def update_E(self):
-        delta_E = self.H_field[1:]-self.H_field[:-1]
-        self.E_field[1:] = self.E_field[1:]*self.alpha[1:]+(self.beta[1:]/self.Delta_z)*(delta_E)"""

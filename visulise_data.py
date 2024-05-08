@@ -1,10 +1,9 @@
 import numpy as np
-import matplotlib
-matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.animation import FuncAnimation, PillowWriter
 import os
+import getpass
 import json
 
 class visulise_data_1D:
@@ -69,40 +68,41 @@ class visulise_data_1D:
                                  bitrate=1800)
         ani.save('EM_water.gif', writer=writer)"""
         plt.show()
-    
+
 class visulise_data_2D:
-    def plot_2D_animate_imshow(self, save_animation: bool = False):
-        
+    def __init__(self):
         self.E_field_array = np.abs(np.load(f'{os.getcwd()}\Data_files\E_field_array.npy'))
-        self.Dielectric_array = np.loadtxt(open(f"{os.getcwd()}\Data_files\Dielectric_2D.csv", "rb"), delimiter=",", skiprows=1)
-        fig,ax = plt.subplots()
-        
-        im1 = plt.imshow(self.Dielectric_array,animated=True, alpha=0.4, cmap = "Greens")
+        self.Dielectric_array = np.loadtxt(open(f"{os.getcwd()}\Data_files\Dielectric_2D.csv", "r"), delimiter=",", skiprows=1)
+
+    def plot_2D_animate_imshow(self, save_animation: bool = False):
+        fig, ax = plt.subplots()
+        im1 = ax.imshow(self.Dielectric_array, animated=True, alpha=0.4, cmap="Greens")
         im1.set_clim(1)
-        im = plt.imshow(self.E_field_array[0], animated=True, cmap="Blues")
-        #ax.set(xticks=np.arange(0, self.cell_spacing*self.Grid_Shape[0], self.cell_spacing))
+        im = ax.imshow(self.E_field_array[0], animated=True, cmap="Blues")
         ax.minorticks_on()
         cb = fig.colorbar(im, ax=ax)
-        cb2 = fig.colorbar(im1, ax = ax)
+        cb2 = fig.colorbar(im1, ax=ax)
         cb2.ax.set_title("$\epsilon_r$")
         ax.set_xlabel("$X$")
         ax.set_ylabel("$Y$")
         cb.ax.set_title("$|\overrightarrow{E_x}(x,y)|$")
-        title = ax.text(0.5,0.95, "", bbox={'facecolor':'w', 'alpha':0.5, 'pad':5},
-                transform=ax.transAxes, ha="center")
-        #im.set_clim(np.min(self.E_field_array), np.max(self.E_field_array))
+        title = ax.text(0.5, 0.95, "", bbox={'facecolor': 'w', 'alpha': 0.5, 'pad': 5},
+                        transform=ax.transAxes, ha="center")
+        im.set_clim(np.min(self.E_field_array), np.max(self.E_field_array[100]))
+
         def updatefig(i):
             im.set_array(self.E_field_array[i])
-            cb.update_normal(im)
             title.set_text(f"Time step: {i}")
-            return im,title,im1,
-        ani = FuncAnimation(fig, updatefig, interval=1, frames= 1500, blit=True)
-        if save_animation != False:
-            writer=PillowWriter(fps=30,
-                                 metadata=dict(artist='Me'),
-                                 bitrate=1800)
-            ani.save(f"{os.getcwd()}\Animation_files\EM_wave.gif", writer=writer)
+            return im, title, im1
+
+        ani = FuncAnimation(fig, updatefig, interval=1, frames=1500, blit=True)
+        
+        if save_animation:
+            writer = PillowWriter(fps=30, metadata=dict(artist=getpass.getuser()), bitrate=1800)
+            ani.save(os.path.join(os.getcwd(), "Animation_files", "EM_wave.gif"), writer=writer)
+        
         plt.show()
+
     
     def plot_2D_surface(self, frame):
         self.E_field_array = np.load(f"{os.getcwd()}\Data_files\E_field_array.npy")
@@ -120,6 +120,7 @@ class visulise_data_2D:
 def main():
     Results = visulise_data_2D()
     Results.plot_2D_animate_imshow()
+    #Results.plot_2D_surface(400)
     plt.show()
 
 if __name__ == "__main__":

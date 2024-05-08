@@ -50,6 +50,33 @@ class Square:
         bottom_right = (self.center[0] + self.side_length // 2, self.center[1] + self.side_length // 2)
         # Set the values in the map within the square's boundaries to 1
         map_[top_left[0]:bottom_right[0]+1, top_left[1]:bottom_right[1]+1] = value
+class Rectangle:
+    def __init__(self, pos_1: tuple, pos_2: tuple, thickness: int, filled: bool = True):
+        """
+        Initialize the Rectangle object.
+
+        Parameters:
+        - pos_x: tuple (x1, x2) representing the x-coordinates of the left-bottom and right-top corners of the rectangle
+        - pos_y: tuple (y1, y2) representing the y-coordinates of the left-bottom and right-top corners of the rectangle
+        - thickness: integer representing the thickness of the rectangle if not filled
+        - filled: boolean indicating whether the rectangle should be filled or just have an outline
+        """
+        self.pos_1, self.pos_2, self.thickness, self.filled = pos_1, pos_2, thickness, filled
+    
+    def create(self, map_, value):
+        # Create an empty mask with the same shape as the map
+        x1, y1 = self.pos_1
+        x2, y2 = self.pos_2
+        if self.filled:
+            # Fill the rectangle area with the specified value
+            map_[y1:y2, x1:x2] = value
+        else:
+            # Draw the outline of the rectangle with the specified thickness
+            map_[y1:y1+self.thickness, x1:x2] = value
+            map_[y2-self.thickness:y2, x1:x2] = value
+            map_[y1:y2, x1:x1+self.thickness] = value
+            map_[y1:y2, x2-self.thickness:x2] = value
+    
 class Ellipsoid:
     def __init__(self, a: int, b: int, r_x: int, r_y: int):
         """
@@ -96,3 +123,5 @@ class Custom:
         pass
     def create(self, map_, value):
         pass
+
+
