@@ -29,43 +29,55 @@ def write_json(data, filename, mode= "w"):
 
 class Grid:
     def __init__(self,
-                shape: tuple = None,
-                cell_spacing: np.float32 = 0.001,
+                shape: tuple,
+                cell_spacing: np.float32,
+                Boundary_Type,
                 Dimensions: int = 2,
-                courant_number: float = 0.5,
+                courant_number: float = 0.5
                  ):
+        
         self.mu_0 = 1.25663706e-6
         self.eps_0 = 8.85418782e-12
         self.cell_spacing = cell_spacing
         self.courant_number = courant_number
         self.delta_t: np.float32 = self.cell_spacing/6e8
-        
+        self.Boundary_Type = Boundary_Type 
         self.N_x,self.N_y = shape
         #Field arrays
         ## Will be used to store the calc fields
-        self.H_field_x = np.zeros((self.N_x, self.N_y), dtype=np.float32)
-        self.H_field_y = np.zeros((self.N_x, self.N_y), dtype=np.float32)
-        self.E_field_x = np.zeros((self.N_x, self.N_y), dtype=np.float32)
-        self.E_field_y = np.zeros((self.N_x, self.N_y), dtype=np.float32)
-        self.E_flux_x = np.zeros((self.N_x, self.N_y), dtype=np.float32)
-        self.E_flux_y = np.zeros((self.N_x, self.N_y), dtype=np.float32)
-        self.I_x = np.zeros((self.N_x, self.N_y), dtype=np.float32)
-
+        self.Grid = np.zeros((self.N_x, self.N_y), dtype=np.float32)
+        self.create_boundaries()
         #Lists will be appened at each time step
         self.E_field_list =[]
         self.H_field_list_x =[]
         self.H_field_list_y =[]
 
         #Material parameters
-        self.rel_eps = np.ones((self.N_x, self.N_y), dtype= np.float32)
-        self.rel_mu = np.ones((self.N_x, self.N_y), dtype=np.float32)
-        self.conductivity = np.zeros((self.N_x, self.N_y), dtype= np.float32)
+        self.create_material_arrays()
         self.dielectric_list = []
 
         open(f'{Path}\Meta_data\Dielectric_2D.json', 'w')
         meta_data = {"Cell_spacing": self.cell_spacing, "Time_Delta": self.delta_t, "Dimensions": Dimensions, "Shape": (self.N_x, self.N_y)}
         write_json(meta_data, f"{Path}\Meta_data/Grid.json", "w")
         write_csv(self.rel_eps, f"{Path}\Data_files\Dielectric_2D.csv")
+
+    def create_boundaries(self):
+        
+        #if callable(self.Boundary_Type):
+        self.Grid,self.PML_Constants = self.Boundary_Type.create_pad(self.Grid)
+        self.N_x, self.N_y = self.Grid.shape            
+        self.H_field_x = np.zeros_like(self.Grid)
+        self.H_field_y = np.zeros_like(self.Grid)
+        self.E_field_x = np.zeros_like(self.Grid)
+        self.E_field_y = np.zeros_like(self.Grid)
+        self.E_flux_x = np.zeros_like(self.Grid)
+        self.E_flux_y = np.zeros_like(self.Grid)
+        self.I_E_x = np.zeros_like(self.Grid)
+
+    def create_material_arrays(self):
+        self.rel_eps = np.ones_like(self.Grid)
+        self.rel_mu = np.ones_like(self.Grid)
+        self.conductivity = np.zeros_like(self.Grid)
 
     def set_source(self, source, position: tuple, Amplitude): #Set the source parameters, using a class function as it allows for variables to set beforehand
         self.source = source
@@ -75,7 +87,7 @@ class Grid:
 
     def update_source(self): #Updates the electric field at self.position for each tick
         self.E_flux_x[self.position_source[0][0]:self.position_source[0][1],self.position_source[1][0]:self.position_source[1][1]] += self.source(self.time_step)
-        #self.E_flux_x[250,250] += self.source(self.time_step)
+        #self.E_flux_x[250,250] += self.source(self.time_step)    
 
     def append_to_list(self):
         self.E_field_list.append(np.copy(self.E_field_x))
@@ -83,14 +95,16 @@ class Grid:
         self.H_field_list_y.append(np.copy(self.H_field_y))   
 
     def update_E_flux_x(self):
+        
         self.E_flux_x[1:self.N_x, 1:self.N_y] += 0.5 * (
             self.H_field_y[1:self.N_x, 1:self.N_y] - self.H_field_y[:self.N_x-1, 1:self.N_y] -
             self.H_field_x[1:self.N_x, 1:self.N_y] + self.H_field_x[1:self.N_x, :self.N_y-1]
-        )
+        ) 
         
     def update_E_x(self):
-        self.E_field_x[1:self.N_x, 1:self.N_y] = self.alpha[1:self.N_x, 1:self.N_y] * (self.E_flux_x[1:self.N_x, 1:self.N_y]- self.I_x[1:self.N_x, 1:self.N_y])
-        self.I_x[1:self.N_x, 1:self.N_y] = self.I_x[1:self.N_x, 1:self.N_y] + self.beta[1:self.N_x, 1:self.N_y]*self.E_field_x[1:self.N_x, 1:self.N_y]
+        self.E_field_x[1:self.N_x, 1:self.N_y] = self.alpha[1:self.N_x, 1:self.N_y] * (self.E_flux_x[1:self.N_x, 1:self.N_y]- self.I_E_x[1:self.N_x, 1:self.N_y])
+        self.I_E_x[1:self.N_x, 1:self.N_y] = self.I_E_x[1:self.N_x, 1:self.N_y] + self.beta[1:self.N_x, 1:self.N_y]*self.E_field_x[1:self.N_x, 1:self.N_y]
+
     def update_H_x(self):
         self.H_field_x[:-1, :-1] += 0.5 *self.rel_mu[:-1, :-1]* (
             self.E_field_x[:-1, :-1] - self.E_field_x[:-1, 1:] 
@@ -188,8 +202,11 @@ class Source:
 def main():#In this Simulation E is normalised by eliminating the electric and magnetic constant from both E and H
     ##Done so that the amplitudes match
     import Dielectric_Mask as Mask
+    from Boundary_Conditions import PML
+    Boundary = PML(40)
     source = Source(cell_spacing=cellspacing, freq=freq_in, tau=(100,1), Amplitude=Amplitude, Position=source_position)
-    FDTD = Grid(shape = (Grid_Size), cell_spacing=cellspacing)
+    FDTD = Grid(shape = (Grid_Size), cell_spacing=cellspacing, Boundary_Type = Boundary)
+    FDTD.add_dieletric(Mask.Circle(100, 100, 50), (1,1,0))
     FDTD.set_source(source.Sinusodial, position = source_position, Amplitude=Amplitude)
     FDTD.run(time_max)
 
