@@ -103,7 +103,6 @@ class visulise_data_2D:
         
         plt.show()
 
-    
     def plot_2D_surface(self, frame):
         self.E_field_array = np.load(f"{os.getcwd()}\Data_files\E_field_array.npy")
         fig = plt.figure()
@@ -111,16 +110,37 @@ class visulise_data_2D:
         x = np.arange(0, np.shape(self.E_field_array[0])[1])
         y = np.arange(0, np.shape(self.E_field_array[0])[0])
         x,y = np.meshgrid(x,y)
-        plot = ax.plot_surface(x,y, self.E_field_array[frame], cmap = "viridis",rstride=2,cstride=2, linewidth=1)
+        plot = ax.plot_surface(x,y, self.E_field_array[frame], cmap = "viridis",rstride=5,cstride=5, linewidth=1)
         ax.set_xlabel("$X$")
         ax.set_ylabel("$Y$")
         cb = fig.colorbar(plot)
         cb.ax.set_title("$\overrightarrow{E_x}(x,y)$")
         #plt.show()
+    
+    def plot_2D_individual_axis(self):
+        self.E_field_array = np.load(f"{os.getcwd()}\Data_files\E_field_array.npy")
+        fig, ax = plt.subplots(2)
+        #print(self.E_field_array[100][:][:].shape)
+        ax[0].set_ylim(np.min(self.E_field_array[ :, :].mean(axis=1))*1.1,np.max(self.E_field_array[ :, :].mean(axis=1))*1.1)
+        ax[1].set_ylim(np.min(self.E_field_array[ :, :].mean(axis=1))*1.1,np.max(self.E_field_array[ :, :].mean(axis=1))*1.1)
+        x_axis, = ax[0].plot(self.E_field_array[0, :, :].mean(axis=1))
+        y_axis, = ax[1].plot(self.E_field_array[0, :, :].mean(axis=0))
+        
+
+        def update(i):
+            x_axis.set_ydata(self.E_field_array[i, :, :].mean(axis=1))
+            y_axis.set_ydata(self.E_field_array[i, :, :].mean(axis=0))
+            return x_axis,y_axis,
+
+        ani = FuncAnimation(fig, update, frames=1500, interval=10, blit=True)
+        plt.show()
+
+
 def main():
     Results = visulise_data_2D()
-    Results.plot_2D_animate_imshow()
-    #Results.plot_2D_surface(400)
+    #Results.plot_2D_animate_imshow()
+    #Results.plot_2D_surface(200)
+    Results.plot_2D_individual_axis()
     plt.show()
 
 if __name__ == "__main__":
