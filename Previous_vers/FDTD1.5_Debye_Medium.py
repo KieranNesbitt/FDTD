@@ -83,7 +83,7 @@ class Grid:
 
     def update_E_flux(self):
         delta_H = self.H_field[:-1] - self.H_field[1:]
-        self.E_flux[1:] += self.courant_number * delta_H
+        self.E_flux[1:] += self.courant_number * delta_H 
 
     def update_E(self):
         for i in np.arange(0,self.N_x-1):
@@ -93,7 +93,7 @@ class Grid:
 
     def update_H(self):
         delta_E=self.E_field[:-1]-self.E_field[1:]
-        self.H_field[:-1]+=self.courant_number*delta_E
+        self.H_field[:-1]+=self.courant_number*delta_E/ self.rel_mu[:-1]
  
     def define_constants(self):
         #self.loss = self.delta_t*self.conductivity/(2*self.eps_0*self.rel_eps)
@@ -110,7 +110,7 @@ class Grid:
             self.chi1[pos[0]:pos[1]] = chi1
             self.tau[pos[0]:pos[1]] = tau        
         #The following exports meta data and values of the dielectric for plotting
-        metadata = {"Permitivity": eps, "Conductivity": conductivity, "Position": pos}
+        metadata = {"Permitivity": eps, "Conductivity": conductivity, "Position": pos, "Permibility":mu, "Chi":chi1}
         self.dielectric_list.append(metadata)
         df = pd.DataFrame(self.rel_eps)
         df.to_csv('Data_files/Dielectric.csv', index=False, header=None)
@@ -182,13 +182,13 @@ def main():#In this Simulation E is normalised by eliminating the electric and m
     source = Source(cell_spacing = cellspacing, freq=freq_in, tau=100, Amplitude=1)
     FDTD = Grid(shape = shape, cell_spacing=cellspacing)
     FDTD.set_source(source.Guassian_40, position = source_position)
-    FDTD.add_dieletric(pos = (100,201), eps=1.7, conductivity=0.0, chi1=2, tau=1e-6)
+    FDTD.add_dieletric((150,175), 1.7,0,1.7,0,1)
     FDTD.run(time_max)
 
 if __name__ == "__main__":
     shape = (201,None)
     freq_in = 400e6
-    source_position: int = 1
+    source_position: int = 100
     cellspacing = 0.1
     time_max = 1001
     main()

@@ -71,14 +71,17 @@ class visulise_data_1D:
 
 class visulise_data_2D:
     def __init__(self):
-        self.E_field_array = np.abs(np.load(f'{os.getcwd()}\Data_files\E_field_array.npy'))
+        self.E_field_array = np.abs(np.load(f"{os.getcwd()}\Data_files\E_field_z_array.npy"))
+        self.H_field_x_array = np.load(f"{os.getcwd()}\Data_files\H_field_x_array.npy")
+        self.H_field_y_array = np.load(f"{os.getcwd()}\Data_files\H_field_y_array.npy")
         self.Dielectric_array = np.loadtxt(open(f"{os.getcwd()}\Data_files\Dielectric_2D.csv", "r"), delimiter=",", skiprows=1)
 
     def plot_2D_animate_imshow(self, save_animation: bool = False):
+        
         fig, ax = plt.subplots()
         im1 = ax.imshow(self.Dielectric_array, animated=True, alpha=0.4, cmap="Greens")
         im1.set_clim(1)
-        im = ax.imshow(self.E_field_array[0], animated=True, cmap="Blues")
+        im = ax.imshow(np.abs(self.E_field_array[0]), animated=True, cmap="Blues")
         ax.minorticks_on()
         cb = fig.colorbar(im, ax=ax)
         cb2 = fig.colorbar(im1, ax=ax)
@@ -91,7 +94,7 @@ class visulise_data_2D:
         im.set_clim(np.min(self.E_field_array), np.max(self.E_field_array[100]))
 
         def updatefig(i):
-            im.set_array(self.E_field_array[i])
+            im.set_array(np.abs(self.E_field_array[i]))
             title.set_text(f"Time step: {i}")
             return im, title, im1
 
@@ -104,7 +107,7 @@ class visulise_data_2D:
         plt.show()
 
     def plot_2D_surface(self, frame):
-        self.E_field_array = np.load(f"{os.getcwd()}\Data_files\E_field_array.npy")
+        
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         x = np.arange(0, np.shape(self.E_field_array[0])[1])
@@ -114,33 +117,49 @@ class visulise_data_2D:
         ax.set_xlabel("$X$")
         ax.set_ylabel("$Y$")
         cb = fig.colorbar(plot)
-        cb.ax.set_title("$\overrightarrow{E_x}(x,y)$")
+        cb.ax.set_title("$\overrightarrow{E_z}(x,y)$")
         #plt.show()
     
-    def plot_2D_individual_axis(self):
-        self.E_field_array = np.load(f"{os.getcwd()}\Data_files\E_field_array.npy")
-        fig, ax = plt.subplots(2)
-        #print(self.E_field_array[100][:][:].shape)
-        ax[0].set_ylim(np.min(self.E_field_array[ :, :].mean(axis=1))*1.1,np.max(self.E_field_array[ :, :].mean(axis=1))*1.1)
-        ax[1].set_ylim(np.min(self.E_field_array[ :, :].mean(axis=1))*1.1,np.max(self.E_field_array[ :, :].mean(axis=1))*1.1)
-        x_axis, = ax[0].plot(self.E_field_array[0, :, :].mean(axis=1))
-        y_axis, = ax[1].plot(self.E_field_array[0, :, :].mean(axis=0))
-        
+    def plot_2D_individual_axis(self, Field: str = "E_field_z"):
+        if Field in ["Electric_Z", "E_field_z"]:
+            Array = self.E_field_array
+            title = "$\overrightarrow{E_z}$"
+        if Field in ["Magnetic_X", "H_field_x"]:
+            Array = self.H_field_x_array
+            title = "$\overrightarrow{H_x}$"
+        if Field in ["Magnetic_Y", "H_field_y"]:
+            Array = self.H_field_y_array
+            title = "$\overrightarrow{H_y}$"
 
+        fig, ax = plt.subplots(2)
+        ax[0].set_title(f"{title}(x)")
+        ax[0].set_xlabel("$x \ index$")
+
+        ax[1].set_title(f"{title}(y)")
+        ax[1].set_xlabel("$y \ index$")
+        x_axis, = ax[0].plot(Array[0, :, :].mean(axis=1))
+        ax[0].set_ylim(np.min(Array[ :, :].mean(axis=1))*1.1,np.max(Array[ :, :].mean(axis=1))*1.1)
+
+        y_axis, = ax[1].plot(Array[0, :, :].mean(axis=0))
+        ax[1].set_ylim(np.min(Array[ :, :].mean(axis=0))*1.1,np.max(Array[ :, :].mean(axis=0))*1.1) 
+
+        
         def update(i):
-            x_axis.set_ydata(self.E_field_array[i, :, :].mean(axis=1))
-            y_axis.set_ydata(self.E_field_array[i, :, :].mean(axis=0))
+            x_axis.set_ydata(Array[i, :, :])
+            y_axis.set_ydata(Array[i, :, :])
+            
             return x_axis,y_axis,
 
-        ani = FuncAnimation(fig, update, frames=1500, interval=10, blit=True)
+        ani = FuncAnimation(fig, update, frames=1500, interval=30, blit=True)
+        plt.tight_layout()
         plt.show()
 
 
 def main():
-    Results = visulise_data_2D()
-    #Results.plot_2D_animate_imshow()
-    #Results.plot_2D_surface(200)
-    Results.plot_2D_individual_axis()
+    Results_2D = visulise_data_2D()
+    Results_2D.plot_2D_animate_imshow()
+    Results_1D = visulise_data_1D()
+    #Results_1D.plot_animate()
     plt.show()
 
 if __name__ == "__main__":
