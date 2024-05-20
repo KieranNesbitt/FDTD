@@ -77,7 +77,6 @@ class visulise_data_2D:
         self.Dielectric_array = np.loadtxt(open(f"{os.getcwd()}\Data_files\Dielectric_2D.csv", "r"), delimiter=",", skiprows=1)
 
     def plot_2D_animate_imshow(self, save_animation: bool = False):
-        
         fig, ax = plt.subplots()
         im1 = ax.imshow(self.Dielectric_array, animated=True, alpha=0.4, cmap="Greens")
         im1.set_clim(1)

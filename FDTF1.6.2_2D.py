@@ -47,9 +47,12 @@ class Grid:
         self.setup_field_arrays()
 
         #Lists will be appened at each time step
-        self.E_field_list =[]
+        self.E_field_list_x =[]
+        self.E_field_list_y =[]
+        self.E_field_list_z =[]
         self.H_field_list_x =[]
         self.H_field_list_y =[]
+        self.H_field_list_z =[]
 
         #Material parameters
         self.setup_material_arrays()
@@ -87,13 +90,14 @@ class Grid:
         self.E_flux_x[self.position_source[0],self.position_source[1]] += self.source(self.time_step)
 
     def append_to_list(self):
-        self.E_field_list.append(np.copy(self.E_field_x))
+        self.E_field_list_z.append(np.copy(self.E_field_x))
         self.H_field_list_x.append(np.copy(self.H_field_x))   
         self.H_field_list_y.append(np.copy(self.H_field_y))  
      
     def update_E_flux(self):
         curl_H = (self.H_field_y[1:,1:] - self.H_field_y[0:-1,1:] -
                   self.H_field_x[1:,1:] + self.H_field_x[1:,0:-1])
+        self.E_flux_x[1:,1:] += self.beta[1:,1:]*self.E_flux_x[1:,1:]
         self.E_flux_x[1:,1:] += curl_H
     def update_E_field(self):
         self.E_field_x[1:,1:] = self.alpha[1:,1:]*self.E_flux_x[1:,1:]
@@ -133,7 +137,7 @@ class Grid:
                 self.update_H_field()
                 self.append_to_list()
                 bar()
-        self.E_field_array = np.array(self.E_field_list)
+        self.E_field_array = np.array(self.E_field_list_z)
             
         self.output_to_files()
     def save_array(self, array, path):
