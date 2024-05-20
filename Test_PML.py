@@ -40,11 +40,10 @@ class PML:
         self.alpha_mx,self.alpha_my = self.PML_creation(self.alpha_mx,self.alpha_my, PML_thickness)
         self.sigma_x, self.sigma_y = self.PML_sigma_creation(self.sigma_x, self.sigma_y,PML_thickness, conductivityE, PML_gradient)
         self.sigma_mx,self.sigma_my = self.PML_sigma_creation(self.sigma_mx,self.sigma_my,PML_thickness, conductivityH, PML_gradient)
-
-        bex = np.exp(-(self.sigma_x/(self.k + self.alpha_x))*(dt/eps_0))
-        bey = np.exp(-(self.sigma_y/(self.k + self.alpha_y))*(dt/eps_0))
-        bhx = np.exp(-(self.sigma_mx/(self.k + self.alpha_mx))*(dt/eps_0))
-        bhy = np.exp(-(self.sigma_my/(self.k + self.alpha_my))*(dt/eps_0))
+        bex = np.exp(-(self.sigma_x/(self.k + self.alpha_x)))#*(dt/eps_0))
+        bey = np.exp(-(self.sigma_y/(self.k + self.alpha_y)))#*(dt/eps_0))
+        bhx = np.exp(-(self.sigma_mx/(self.k + self.alpha_mx)))#*(dt/eps_0))
+        bhy = np.exp(-(self.sigma_my/(self.k + self.alpha_my)))#*(dt/eps_0))
         b_constants = (bex,bey, bhx, bhy)
         aex = (bex -1 )*(conductivityE/(conductivityE+self.alpha_x))
         aey = (bey - 1 )*(conductivityE/(conductivityE+self.alpha_y))
@@ -54,19 +53,19 @@ class PML:
         return a_constants, b_constants
 
 boundary = PML(Grid,PML_thickness)
-a_constants, b_constants = boundary.PML_create(conductivityE=0.9, conductivityH=0.9)
+a_constants, b_constants = boundary.PML_create(conductivityE=0.25, conductivityH=0.25)
 aex, aey, ahx, ahy = a_constants
 bex, bey, bhx, bhy = b_constants
 fig, ax = plt.subplots(2,2)
-im=ax[0,0].imshow(bex, cmap="Blues")
-ax[0,1].imshow(bey, cmap="Blues")
-ax[1,0].imshow(bhx, cmap= "Blues")
-ax[1,1].imshow(bhy, cmap="Blues")
+im=ax[0,0].imshow(bex, cmap="viridis")
+ax[0,1].imshow(bey, cmap="viridis")
+ax[1,0].imshow(ahx, cmap= "viridis")
+ax[1,1].imshow(ahy, cmap="viridis")
 
 fig.subplots_adjust(right=0.8)
 cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
-fig.colorbar(im, cax=cbar_ax)
-fig1, ax1 = plt.subplots(1)
-ax1.plot(aex[:,0])
-ax1.plot(ahx[:,0])
+cb = fig.colorbar(im, cax=cbar_ax)
+"""fig1, ax1 = plt.subplots(1)
+ax1.plot(bex[:,0], label = "B Constants")
+ax1.plot(ahx[:,0], label = "A Constant")"""
 plt.show()
