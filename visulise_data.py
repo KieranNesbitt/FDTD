@@ -78,7 +78,7 @@ class visulise_data_2D:
 
     def plot_2D_animate_imshow(self, save_animation: bool = False):
         fig, ax = plt.subplots()
-        im1 = ax.imshow(self.Dielectric_array, animated=True, alpha=0.4, cmap="Greens")
+        im1 = ax.imshow(self.Dielectric_array, animated=True, alpha=0.4, cmap="Greens", vmin=1)
         im1.set_clim(1)
         im = ax.imshow(np.abs(self.E_field_array[0]), animated=True, cmap="Blues")
         ax.minorticks_on()
@@ -94,6 +94,7 @@ class visulise_data_2D:
 
         def updatefig(i):
             im.set_array(np.abs(self.E_field_array[i]))
+            im1.set_clim(1)
             title.set_text(f"Time step: {i}")
             return im, title, im1
 

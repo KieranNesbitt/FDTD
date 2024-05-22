@@ -220,10 +220,10 @@ class Source:
 def main():#In this Simulation E is normalised by eliminating the electric and magnetic constant from both E and H
     ##Done so that the amplitudes match
     import Dielectric_Mask as Mask
-    from Boundary_Conditions import UPML
+    from Boundary_Conditions import PML
     source = Source(cell_spacing=cellspacing, freq=freq_in, tau=(100,1), Amplitude=Amplitude, Position=source_position)
     FDTD = Grid(shape = (Grid_Size), cell_spacing=cellspacing)
-    FDTD.set_PML_boundary(UPML,PML_Thickness)
+    FDTD.set_PML_boundary(PML,PML_Thickness)
     FDTD.setup_fields()
     FDTD.set_source(source.guassian_40, position = source_position, Amplitude=Amplitude)
     FDTD.run(time_max)
@@ -235,6 +235,6 @@ if __name__ == "__main__":
     cellspacing = wavelength/40 #Cellspacing is determined by the number of cells per wavelength, Standard for this sim is 0 ##Looks the best 
     time_max: int = 1001 #Max time step taken
     Amplitude: int = 1
-    PML_Thickness = 10
-    source_position = (15,15)
+    PML_Thickness = 40
+    source_position = (5+PML_Thickness,5+PML_Thickness)
     main()
