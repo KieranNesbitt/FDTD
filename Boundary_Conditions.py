@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 class PML:
-    def __init__(self, Grid,PML_thickness, dx:float):
+    def __init__(self, Grid,PML_thickness, dw:float):
         self.PML_thickness = PML_thickness
         self.Grid = np.pad(Grid, PML_thickness, mode="constant", constant_values=0)
         self.alpha_x = np.ones_like(self.Grid)
@@ -14,9 +14,8 @@ class PML:
         self.sigma_my = np.zeros_like(self.Grid)
         self.k=1
         self.eps_0 = 8.85418782e-12
-        self.dx = dx
-        print(dx)
-        self.dt = dx/6e8
+        self.dw = dw
+        self.dt = dw/6e8
 
     def PML_creation(self,x_array,y_array, PML_thickness):
         for i in range(PML_thickness+1):
@@ -40,16 +39,17 @@ class PML:
         self.sigma_mx,self.sigma_my = self.PML_sigma_creation(self.sigma_mx,self.sigma_my,self.PML_thickness, conductivityH, PML_gradient)
 
         sigma_values = (self.sigma_x, self.sigma_y, self.sigma_mx, self.sigma_my)
-        bex = np.exp(-(self.sigma_x/(self.k + self.alpha_x)))
-        bey = np.exp(-(self.sigma_y/(self.k + self.alpha_y)))
-        bhx = np.exp(-(self.sigma_mx/(self.k + self.alpha_mx)))
-        bhy = np.exp(-(self.sigma_my/(self.k + self.alpha_my)))
+        
+        bex = np.exp(-(self.sigma_x/(self.k + self.alpha_x))*(self.dt/self.eps_0))
+        bey = np.exp(-(self.sigma_y/(self.k + self.alpha_y))*(self.dt/self.eps_0))
+        bhx = np.exp(-(self.sigma_mx/(self.k + self.alpha_mx))*(self.dt/self.eps_0))
+        bhy = np.exp(-(self.sigma_my/(self.k + self.alpha_my))*(self.dt/self.eps_0))
 
         b_constants = (bex,bey, bhx, bhy)
-        aex = (bex -1 )*(conductivityE/(conductivityE+self.alpha_x))
-        aey = (bey - 1 )*(conductivityE/(conductivityE+self.alpha_y))
-        ahx = (bhx - 1 )*(conductivityH/(conductivityH+self.alpha_mx))
-        ahy =  (bhy - 1 )*(conductivityH/(conductivityH+self.alpha_my))
+        aex = (bex -1 )*(conductivityE/(conductivityE+self.alpha_x*self.k))
+        aey = (bey - 1 )*(conductivityE/(conductivityE+self.alpha_y*self.k))
+        ahx = (bhx - 1 )*(conductivityH/(conductivityH+self.alpha_mx*self.k))
+        ahy =  (bhy - 1 )*(conductivityH/(conductivityH+self.alpha_my*self.k))
         a_constants = (aex,aey,ahx,ahy)
         return a_constants, b_constants, sigma_values ,self.Grid
     

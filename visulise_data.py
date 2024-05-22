@@ -74,7 +74,7 @@ class visulise_data_2D:
         self.E_field_array = np.abs(np.load(f"{os.getcwd()}\Data_files\E_field_z_array.npy"))
         self.H_field_x_array = np.load(f"{os.getcwd()}\Data_files\H_field_x_array.npy")
         self.H_field_y_array = np.load(f"{os.getcwd()}\Data_files\H_field_y_array.npy")
-        self.Dielectric_array = np.loadtxt(open(f"{os.getcwd()}\Data_files\Dielectric_2D.csv", "r"), delimiter=",", skiprows=1)
+        self.Dielectric_array = np.loadtxt(open(f"{os.getcwd()}\Data_files\Dielectric_2D.csv", "r"), delimiter=",")
 
     def plot_2D_animate_imshow(self, save_animation: bool = False):
         fig, ax = plt.subplots()
@@ -87,10 +87,10 @@ class visulise_data_2D:
         cb2.ax.set_title("$\epsilon_r$")
         ax.set_xlabel("$X$")
         ax.set_ylabel("$Y$")
-        cb.ax.set_title("$|\overrightarrow{E_x}(x,y)|$")
+        cb.ax.set_title("$|\overrightarrow{Ex}(x,y)|$")
         title = ax.text(0.5, 0.95, "", bbox={'facecolor': 'w', 'alpha': 0.5, 'pad': 5},
                         transform=ax.transAxes, ha="center")
-        im.set_clim(np.min(self.E_field_array), np.max(self.E_field_array[100]))
+        im.set_clim(np.min(self.E_field_array), 1)
 
         def updatefig(i):
             im.set_array(np.abs(self.E_field_array[i]))
