@@ -90,7 +90,7 @@ class visulise_data_2D:
         cb.ax.set_title("$|\overrightarrow{Ex}(x,y)|$")
         title = ax.text(0.5, 0.95, "", bbox={'facecolor': 'w', 'alpha': 0.5, 'pad': 5},
                         transform=ax.transAxes, ha="center")
-        im.set_clim(np.min(self.E_field_array), 1)
+        im.set_clim(np.min(self.E_field_array), 0.1)
 
         def updatefig(i):
             im.set_array(np.abs(self.E_field_array[i]))

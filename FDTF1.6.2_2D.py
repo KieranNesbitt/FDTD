@@ -64,7 +64,6 @@ class Grid:
         #Material parameters
         self.material_arrays()
         self.dielectric_list = []
-        print(self.rel_eps.shape)
         write_csv(self.rel_eps, f"{Path}\Data_files\Dielectric_2D.csv")
 
     def set_source(self, source, position: tuple, Amplitude): #Set the source parameters, using a class function as it allows for variables to set beforehand
@@ -74,9 +73,9 @@ class Grid:
         write_json(metadata, f"{Path}\Meta_data\Source_2D.json", "w")
 
     def set_PML_boundary(self, boundary_type, PML_thickness):
-        boundary = boundary_type(self.Grid, PML_thickness, self.cell_spacing)
+        boundary = boundary_type(self.Grid, PML_thickness)
 
-        self.a_constants, self.b_constants, self.sigma_values,self.Grid = boundary.create(0.25,0.25)
+        self.PML_1, self.PML_2, self.PML_3,self.Grid = boundary.create(0.333)
 
     def field_arrays(self):
 
@@ -116,18 +115,22 @@ class Grid:
     def update_E_flux(self):
         curl_H = (self.H_field_y[1:,1:] - self.H_field_y[0:-1,1:] -
                   self.H_field_x[1:,1:] + self.H_field_x[1:,0:-1])
-        self.E_flux_z[1:,1:] += 0.5*curl_H
-
-
+        self.E_flux_z[1:,1:] *= self.PML_3[1:,1:]
+        self.E_flux_z[1:,1:] += 0.5*curl_H*self.PML_2[1:,1:]
 
     def update_E_field(self):
-        self.E_field_z[1:,1:] = self.alpha[1:,1:]*self.E_flux_z[1:,1:]    
+        self.E_field_z[1:,1:] = self.alpha[1:,1:]*self.E_flux_z[1:,1:]  
+
     def update_H_field(self):
-        curl_E_x = self.E_field_z[:-1,:-1] - self.E_field_z[:-1, 1:]
-        self.H_field_x[:-1,:-1] += 0.5*curl_E_x
+        curl_E_x = self.E_field_z[:,:-1] - self.E_field_z[:, 1:]
+        self.PhiH_x[:,:-1] += self.PML_1[:,:-1]*curl_E_x
+        self.H_field_x[:,:-1] *=self.PML_3[:,:-1]
+        self.H_field_x[:,:-1] += 0.5*(curl_E_x+self.PhiH_x[:,:-1])*self.PML_2[:,:-1]
 
         curl_E_y = self.E_field_z[1:,:-1] - self.E_field_z[:-1, :-1]
-        self.H_field_y[:-1,:-1] += 0.5*curl_E_y
+        self.PhiH_y[:-1,:-1] += self.PML_1[:-1,:-1]*curl_E_y
+        self.H_field_y[:-1,:-1] *= self.PML_3[:-1,:-1]
+        self.H_field_y[:-1,:-1] += 0.5*(curl_E_y+self.PhiH_y[:-1,:-1])*self.PML_2[:-1,:-1]
 
     def define_constants(self):
         self.alpha = 1/(self.rel_eps + (self.conductivity*self.delta_t/self.eps_0))
@@ -162,6 +165,7 @@ class Grid:
             
         self.output_to_files()
     def save_array(self, array, path):
+        print(f"Saving {path} to file {Path+path}")
         np.save(f"{Path}{path}", array)
 
 
@@ -216,21 +220,21 @@ class Source:
 def main():#In this Simulation E is normalised by eliminating the electric and magnetic constant from both E and H
     ##Done so that the amplitudes match
     import Dielectric_Mask as Mask
-    from Boundary_Conditions import PML
+    from Boundary_Conditions import UPML
     source = Source(cell_spacing=cellspacing, freq=freq_in, tau=(100,1), Amplitude=Amplitude, Position=source_position)
     FDTD = Grid(shape = (Grid_Size), cell_spacing=cellspacing)
-    FDTD.set_PML_boundary(PML,PML_Thickness)
+    FDTD.set_PML_boundary(UPML,PML_Thickness)
     FDTD.setup_fields()
     FDTD.set_source(source.guassian_40, position = source_position, Amplitude=Amplitude)
     FDTD.run(time_max)
 
 if __name__ == "__main__":
-    Grid_Size = (50,50) # Reminder that this is (Rows, Columns)
+    Grid_Size = (10,10) # Reminder that this is (Rows, Columns)
     freq_in = 400e6
     wavelength = 3e8/freq_in #Used for determing cell spacing
     cellspacing = wavelength/40 #Cellspacing is determined by the number of cells per wavelength, Standard for this sim is 0 ##Looks the best 
-    time_max: int = 1000 #Max time step taken
-    Amplitude: int = 10
+    time_max: int = 1001 #Max time step taken
+    Amplitude: int = 1
     PML_Thickness = 10
     source_position = (15,15)
     main()

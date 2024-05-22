@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-class PML:
+class CPML:
     def __init__(self, Grid,PML_thickness, dw:float):
         self.PML_thickness = PML_thickness
         self.Grid = np.pad(Grid, PML_thickness, mode="constant", constant_values=0)
@@ -50,6 +50,21 @@ class PML:
         aey = (bey - 1 )*(conductivityE/(conductivityE+self.alpha_y*self.k))
         ahx = (bhx - 1 )*(conductivityH/(conductivityH+self.alpha_mx*self.k))
         ahy =  (bhy - 1 )*(conductivityH/(conductivityH+self.alpha_my*self.k))
+        
         a_constants = (aex,aey,ahx,ahy)
+
         return a_constants, b_constants, sigma_values ,self.Grid
     
+class UPML:
+    def __init__(self, Grid,PML_thickness):
+        self.PML_thickness = PML_thickness
+        self.Grid = Grid
+    
+    def create(self, conductivity: float):  
+        self.Grid_PML = np.pad(self.Grid, self.PML_thickness, mode="linear_ramp", end_values=(self.PML_thickness, self.PML_thickness))
+        self.PML_1 = conductivity*(self.Grid_PML/self.PML_thickness)**3
+        self.PML_2 = (1/(1+self.PML_1))
+        self.PML_3 = (1-self.PML_1)/(1+self.PML_1)
+
+        return self.PML_1, self.PML_2, self.PML_3, np.pad(self.Grid, self.PML_thickness, mode="constant", constant_values=0)
+
