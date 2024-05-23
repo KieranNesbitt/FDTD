@@ -60,12 +60,12 @@ class PML:
         self.PML_thickness = PML_thickness
         self.Grid = Grid
     
-    def create(self, conductivity: float):  
+    def create(self, conductivity: float, graded_conductivity: bool=False,PML_Gradient: float = 3):  
         self.Grid_PML = np.pad(self.Grid, self.PML_thickness, mode="linear_ramp", end_values=(self.PML_thickness, self.PML_thickness))
-        self.PML_1 = conductivity*(self.Grid_PML/self.PML_thickness)**3
-
-        conductivity = np.pad(self.Grid, self.PML_thickness, mode="linear_ramp", end_values=(conductivity,conductivity))
-        self.PML_1 = conductivity*(self.Grid_PML/self.PML_thickness)**3
+        if graded_conductivity:
+            conductivity = np.pad(self.Grid, self.PML_thickness, mode="linear_ramp", end_values=(conductivity,conductivity))
+        self.PML_1 = conductivity*(self.Grid_PML/self.PML_thickness)**PML_Gradient
+        
         self.PML_2 = (1/(1+self.PML_1))
         self.PML_3 = (1-self.PML_1)/(1+self.PML_1)
 

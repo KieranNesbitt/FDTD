@@ -5,12 +5,13 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 import os
 import getpass
 import json
+plt.switch_backend("QtAgg")
+plt.style.use("seaborn-v0_8-notebook")
 
 class visulise_data_1D:
     def __init__(self):
         df_E = pd.read_csv(f"{os.getcwd()}\Data_files\E_field.csv", header=None)
         df_H = pd.read_csv(f"{os.getcwd()}\Data_files\H_field.csv", header = None)
-        plt.style.use("seaborn-v0_8")
         self.df_Dielectric = pd.read_csv(f"{os.getcwd()}\Data_files/Dielectric.csv", header=None)
         self.array_E = df_E.values[:, :-1].astype(float)
         self.dielectric_list = []
@@ -71,6 +72,7 @@ class visulise_data_1D:
 
 class visulise_data_2D:
     def __init__(self):
+        
         self.E_field_array = np.abs(np.load(f"{os.getcwd()}\Data_files\E_field_z_array.npy"))
         self.H_field_x_array = np.load(f"{os.getcwd()}\Data_files\H_field_x_array.npy")
         self.H_field_y_array = np.load(f"{os.getcwd()}\Data_files\H_field_y_array.npy")
@@ -88,7 +90,7 @@ class visulise_data_2D:
         ax.set_xlabel("$X$")
         ax.set_ylabel("$Y$")
         cb.ax.set_title("$|\overrightarrow{Ex}(x,y)|$")
-        title = ax.text(0.5, 0.95, "", bbox={'facecolor': 'w', 'alpha': 0.5, 'pad': 5},
+        title = ax.text(0.5, 0.95, "", bbox=dict(facecolor='none', edgecolor='none'),
                         transform=ax.transAxes, ha="center")
         im.set_clim(np.min(self.E_field_array), 0.1)
 
@@ -98,12 +100,12 @@ class visulise_data_2D:
             title.set_text(f"Time step: {i}")
             return im, title, im1
 
-        ani = FuncAnimation(fig, updatefig, interval=1, frames=1500, blit=True)
+        ani = FuncAnimation(fig, updatefig, interval=1, frames=1000, blit=True)
         
         if save_animation:
             writer = PillowWriter(fps=30, metadata=dict(artist=getpass.getuser()), bitrate=1800)
             ani.save(os.path.join(os.getcwd(), "Animation_files", "EM_wave.gif"), writer=writer)
-        
+        plt.tight_layout()
         plt.show()
 
     def plot_2D_surface(self, frame):
@@ -145,12 +147,12 @@ class visulise_data_2D:
 
         
         def update(i):
-            x_axis.set_ydata(Array[i, :, :])
-            y_axis.set_ydata(Array[i, :, :])
+            x_axis.set_ydata(Array[i, :, :].mean(axis=1))
+            y_axis.set_ydata(Array[i, :, :].mean(axis=0))
             
             return x_axis,y_axis,
 
-        ani = FuncAnimation(fig, update, frames=1500, interval=30, blit=True)
+        ani = FuncAnimation(fig, update, frames=1000, interval=30, blit=True)
         plt.tight_layout()
         plt.show()
 

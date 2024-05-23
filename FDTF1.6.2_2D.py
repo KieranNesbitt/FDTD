@@ -75,7 +75,7 @@ class Grid:
     def set_PML_boundary(self, boundary_type, PML_thickness):
         boundary = boundary_type(self.Grid, PML_thickness)
 
-        self.PML_1, self.PML_2, self.PML_3,self.Grid = boundary.create(0.333)
+        self.PML_1, self.PML_2, self.PML_3,self.Grid = boundary.create(0.333,3,True)
 
     def field_arrays(self):
 
@@ -225,16 +225,16 @@ def main():#In this Simulation E is normalised by eliminating the electric and m
     FDTD = Grid(shape = (Grid_Size), cell_spacing=cellspacing)
     FDTD.set_PML_boundary(PML,PML_Thickness)
     FDTD.setup_fields()
-    FDTD.set_source(source.guassian_40, position = source_position, Amplitude=Amplitude)
+    FDTD.set_source(source.Sinusodial, position = source_position, Amplitude=Amplitude)
     FDTD.run(time_max)
 
 if __name__ == "__main__":
-    Grid_Size = (10,10) # Reminder that this is (Rows, Columns)
+    Grid_Size = (200,200) # Reminder that this is (Rows, Columns)
     freq_in = 400e6
     wavelength = 3e8/freq_in #Used for determing cell spacing
     cellspacing = wavelength/40 #Cellspacing is determined by the number of cells per wavelength, Standard for this sim is 0 ##Looks the best 
     time_max: int = 1001 #Max time step taken
     Amplitude: int = 1
-    PML_Thickness = 40
-    source_position = (5+PML_Thickness,5+PML_Thickness)
+    PML_Thickness = 20
+    source_position = (100+PML_Thickness,100+PML_Thickness)
     main()

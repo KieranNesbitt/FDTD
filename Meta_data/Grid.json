@@ -3,7 +3,7 @@
     "Time_Delta": 3.125e-11,
     "Dimensions": 2,
     "Shape": [
-        10,
-        10
+        200,
+        200
     ]
 }

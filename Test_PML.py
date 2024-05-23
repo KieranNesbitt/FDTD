@@ -58,7 +58,7 @@ class PML:
         ahy =  (bhy - 1 )*(conductivityH/(conductivityH+self.alpha_my*self.k))
         a_constants = (aex,aey,ahx,ahy)
         return a_constants, b_constants, sigma_values ,self.Grid
-    
+"""    
 
 boundary = PML(Grid,PML_thickness, dw = dx)
 a_constants, b_constants, sigma_array, Grid = boundary.create(conductivityE=0.75, conductivityH=0.75)
@@ -76,4 +76,9 @@ cb = fig.colorbar(im, cax=cbar_ax)
 fig1, ax1 = plt.subplots(1)
 ax1.plot(bex[:,0], label = "B Constants")
 ax1.plot(aex[:,0], label = "A Constant")
+plt.show()"""
+from Boundary_Conditions import PML as P
+b = P(np.zeros((100,100)), 40)
+PML_1, PML_2, PML_3, Grid=b.create(0.333, 3)
+plt.imshow(PML_1, cmap="plasma", vmax=0.01)
 plt.show()
