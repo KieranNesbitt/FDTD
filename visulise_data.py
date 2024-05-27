@@ -6,7 +6,7 @@ import os
 import getpass
 import json
 plt.switch_backend("QtAgg")
-plt.style.use("seaborn-v0_8-notebook")
+plt.style.use("seaborn-v0_8")
 
 class visulise_data_1D:
     def __init__(self):
@@ -92,7 +92,7 @@ class visulise_data_2D:
         cb.ax.set_title("$|\overrightarrow{Ex}(x,y)|$")
         title = ax.text(0.5, 0.95, "", bbox=dict(facecolor='none', edgecolor='none'),
                         transform=ax.transAxes, ha="center")
-        im.set_clim(np.min(self.E_field_array), 0.1)
+        im.set_clim(np.min(self.E_field_array), np.max(self.E_field_array)/2)
 
         def updatefig(i):
             im.set_array(np.abs(self.E_field_array[i]))
