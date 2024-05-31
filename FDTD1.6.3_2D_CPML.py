@@ -29,16 +29,14 @@ def write_json(data, filename, mode= "w"):
 
 class Grid:
     def __init__(self,
-                
                 shape: tuple,
                 cell_spacing: np.float32,
-                courant_number: float = 0.5,
                 Dimensions: int = 2,
                  ):
+
         self.mu_0 = 1.25663706e-6
         self.eps_0 = 8.85418782e-12
         self.cell_spacing = cell_spacing
-        self.courant_number = courant_number
         self.delta_t: np.float32 = self.cell_spacing/6e8
         
         self.N_x,self.N_y = shape
@@ -74,8 +72,8 @@ class Grid:
 
     def set_PML_boundary(self, boundary_type):
         boundary_type.setup_grid(self.Grid)
-
-        self.PML_alpha, self.PML_kappa, self.PML_sigma, self.Grid = boundary_type.create()
+        self.Grid = boundary_type.create()
+        boundary_type.check_constants()
 
     def field_arrays(self):
 
@@ -116,20 +114,22 @@ class Grid:
         curl_H_y = (self.H_field_y[1:,1:] - self.H_field_y[0:-1,1:])/self.cell_spacing
         curl_H_x = (self.H_field_x[1:,1:] - self.H_field_x[1:,0:-1])/self.cell_spacing
         
-        
         self.E_flux_z[1:,1:] += (curl_H_y-curl_H_x)*self.beta_E[1:,1:]
 
+
     def update_E_field(self):
-        self.E_field_z[1:,1:] = self.alpha_E[1:,1:]*self.E_flux_z[1:,1:]  
+        self.E_field_z[1:,1:] = self.alpha_E[1:,1:]*self.E_flux_z[1:,1:]
+
 
     def update_H_field(self):
         curl_E_zx = (self.E_field_z[:,:-1] - self.E_field_z[:, 1:])/self.cell_spacing
         self.H_field_x[:,:-1] *=self.alpha_H[:,:-1]
-        self.H_field_x[:,:-1] += self.beta_H[:,:-1]*curl_E_zx
+        self.H_field_x[:,:-1] += self.beta_H[:,:-1]*curl_E_zx 
 
         curl_E_zy = (self.E_field_z[1:,:-1] - self.E_field_z[:-1, :-1])/self.cell_spacing
+
         self.H_field_y[:-1,:-1] *= self.alpha_H[:-1,:-1]
-        self.H_field_y[:-1,:-1] += self.beta_H[:-1,:-1]*curl_E_zy
+        self.H_field_y[:-1,:-1] += self.beta_H[:-1,:-1]*curl_E_zy 
 
     def define_constants(self):
         loss_E = (self.conductivity*self.delta_t)/(2*self.rel_eps*self.eps_0)
@@ -232,12 +232,12 @@ def main():#In this Simulation E is normalised by eliminating the electric and m
     FDTD.run(time_max)
 
 if __name__ == "__main__":
-    Grid_Size = (100,100) # Reminder that this is (Rows, Columns)
+    Grid_Size = (40,40) # Reminder that this is (Rows, Columns)
     freq_in = 400e6
     wavelength = 3e8/freq_in #Used for determing cell spacing
     cellspacing = wavelength/40 #Cellspacing is determined by the number of cells per wavelength, Standard for this sim is 0 ##Looks the best 
     time_max: int = 1001 #Max time step taken
     Amplitude: int = 1
-    PML_Thickness = 10
-    source_position = (60,60)
+    PML_Thickness = 20
+    source_position = (50,50)
     main()
