@@ -8,10 +8,11 @@ class CPML:
         self.k_max=10
         self.m = 3
         self.r=0.005
-        self.alpha_max=0.25
+        self.alpha_max=0.1
         self.sigma_max = (0.8*(self.m+1))/(377*dw)
         self.m_a = 1
         self.eps_0 = 8.85418782e-12
+        self.mu_0 = 1.25663706e-6
         self.dw = dw
         self.dt = dw/6e8
 
@@ -30,11 +31,17 @@ class CPML:
             self.PML_sigma_x[:,-i-1] = self.sigma_max*((self.PML_thickness-i)/self.PML_thickness)**self.m
 
     def setup_PML_constants(self):
-        self.PML_beta_x = np.exp(-self.PML_sigma_x*(1+self.r)*(self.dt/self.eps_0))
-        self.PML_beta_y = np.exp(self.PML_sigma_y*(1+self.r)*(self.dt/self.eps_0))
+        self.PML_beta_Ex = np.exp(-self.PML_sigma_x*(1+self.r)*(self.dt/self.eps_0))
+        self.PML_beta_Ey = np.exp(-self.PML_sigma_y*(1+self.r)*(self.dt/self.eps_0))
 
-        self.PML_alpha_x = self.PML_beta_x/(1+self.r)
-        self.PML_alpha_y = self.PML_beta_y/(1+self.r)
+        self.PML_beta_Mx = np.exp(-self.PML_sigma_x*(1+self.r)*(self.dt/self.mu_0))
+        self.PML_beta_My = np.exp(-self.PML_sigma_y*(1+self.r)*(self.dt/self.mu_0))
+
+        self.PML_alpha_Ex = self.PML_beta_Ex/(1+self.r)
+        self.PML_alpha_Ey = self.PML_beta_Ey/(1+self.r)
+
+        self.PML_alpha_Mx = self.PML_beta_Mx/(1+self.r)
+        self.PML_alpha_My = self.PML_beta_My/(1+self.r)
 
     def create(self):
         self.setup_PML_sigma()
@@ -48,13 +55,12 @@ class CPML:
         ax[0,1].set_title(r"$\alpha(y)$")
         ax[1,0].set_title(r"$\beta(x)$")
         ax[1,1].set_title(r"$\alpha(y)$")
-        im1=ax[0,0].imshow(self.PML_beta_x,aspect='auto')
-        im2=ax[0,1].imshow(self.PML_alpha_y,aspect='auto')
-        plt1 = ax[1,0].scatter(np.arange(0, self.PML_beta_x.shape[0]), self.PML_beta_x[0,:], marker=".",c =self.PML_beta_x[0,:], cmap = "viridis")
-        plt2 = ax[1,1].scatter(np.arange(0,self.PML_alpha_y.shape[0]),self.PML_alpha_y[:,0],marker=".", c=self.PML_alpha_y[:,0], cmap="viridis")
+        im1=ax[0,0].imshow(self.PML_beta_Ex,aspect='auto')
+        im2=ax[0,1].imshow(self.PML_alpha_Ey,aspect='auto')
+        plt1 = ax[1,0].scatter(np.arange(0, self.PML_beta_Ex.shape[0]), self.PML_beta_Ex[0,:], marker=".",c =self.PML_beta_Ex[0,:], cmap = "viridis")
+        plt2 = ax[1,1].scatter(np.arange(0,self.PML_alpha_Ey.shape[0]),self.PML_alpha_Ey[:,0],marker=".", c=self.PML_alpha_Ey[:,0], cmap= "viridis")
         fig.colorbar(im1, ax=ax[:,0])
         fig.colorbar(im2, ax=ax[:,1])
-
         plt.show()
         
 class PML:

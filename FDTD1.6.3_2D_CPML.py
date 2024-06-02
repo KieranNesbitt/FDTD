@@ -238,6 +238,6 @@ if __name__ == "__main__":
     cellspacing = wavelength/40 #Cellspacing is determined by the number of cells per wavelength, Standard for this sim is 0 ##Looks the best 
     time_max: int = 1001 #Max time step taken
     Amplitude: int = 1
-    PML_Thickness = 20
+    PML_Thickness = 32
     source_position = (50,50)
     main()
